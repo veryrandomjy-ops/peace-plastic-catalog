@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beer Tower 目录编辑器 · 所见即所得</title>
+<style>
+  :root{
+    --amber:#E8A33D; --amber-d:#C8821C; --gold:#F2C879;
+    --ink:#1c140a; --dark:#241a0e; --paper:#fbf6ec; --line:#e7dcc6; --muted:#8a7a5f;
+    --cols:3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#efe7d8;color:var(--ink);}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ---------- 工具栏 ---------- */
+  .toolbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);
+    box-shadow:0 2px 10px rgba(60,40,10,.08);}
+  .tb-title{font-weight:800;color:var(--dark);font-size:15px;display:flex;align-items:center;gap:7px;}
+  .tb-title .dot{width:10px;height:10px;border-radius:50%;background:var(--amber);}
+  .tb-group{display:flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid var(--line);
+    border-radius:10px;background:#faf6ee;font-size:13px;color:var(--muted);}
+  .tb-group label{white-space:nowrap;}
+  .tb-group input[type=range]{width:96px;accent-color:var(--amber);}
+  .tb-sep{width:1px;height:26px;background:var(--line);}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;font-size:13px;
+    color:var(--dark);transition:.15s;font-weight:600;}
+  .btn:hover{border-color:var(--amber);color:var(--amber-d);}
+  .btn.primary{background:var(--amber);border-color:var(--amber);color:#fff;}
+  .btn.primary:hover{background:var(--amber-d);color:#fff;}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .toggle button{border:0;background:#fff;padding:7px 14px;font-size:13px;color:var(--muted);font-weight:600;}
+  .toggle button.on{background:var(--amber);color:#fff;}
+  input[type=color]{width:30px;height:28px;border:1px solid var(--line);border-radius:7px;padding:2px;background:#fff;cursor:pointer;}
+
+  /* ---------- 画布 ---------- */
+  .viewport{padding:26px;overflow:auto;}
+  #canvas{background:var(--paper);max-width:1180px;margin:0 auto;border-radius:14px;overflow:hidden;
+    box-shadow:0 10px 40px rgba(60,40,10,.12);transform-origin:top center;}
+
+  /* ---------- 封面 ---------- */
+  .cover{position:relative;min-height:60vh;display:flex;flex-direction:column;justify-content:center;
+    align-items:center;text-align:center;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%, #3a2a12 0%, #1c140a 60%, #120c05 100%);color:#fff;padding:46px 24px;}
+  .cover::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 50% at 50% 120%, rgba(232,163,61,.35), transparent 70%);}
+  .cover .kicker{letter-spacing:.4em;font-size:12px;color:var(--gold);text-transform:uppercase;
+    border:1px solid rgba(242,200,121,.5);padding:7px 16px;border-radius:30px;position:relative;}
+  .cover .tap{font-size:54px;margin:8px 0 2px;position:relative;}
+  .cover h1{font-size:clamp(34px,6vw,68px);margin:18px 0 4px;font-weight:800;
+    background:linear-gradient(180deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;position:relative;}
+  .cover .sub{font-size:clamp(14px,2vw,20px);color:#f3e4c5;position:relative;}
+  .cover .meta{margin-top:26px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center;position:relative;color:#e9dcc0;font-size:13px;}
+  .cover .meta div{background:rgba(255,255,255,.06);border:1px solid rgba(242,200,121,.25);padding:10px 15px;border-radius:11px;min-width:140px;}
+  .cover .meta b{display:block;color:var(--gold);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;font-weight:600;}
+  .cover .foot{position:absolute;bottom:14px;font-size:11px;color:#9c8a68;letter-spacing:.2em;}
+
+  /* ---------- 区块 ---------- */
+  .wrap{max-width:1120px;margin:0 auto;padding:0 22px;}
+  section{padding:44px 0;}
+  .sec-title{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .sec-title h2{font-size:26px;margin:0;color:var(--dark);}
+  .sec-title .en{color:var(--amber-d);font-size:13px;letter-spacing:.18em;text-transform:uppercase;}
+  .sec-line{height:3px;background:linear-gradient(90deg,var(--amber),transparent);border-radius:3px;margin:8px 0 22px;}
+  .lead{color:var(--muted);margin:0 0 22px;max-width:760px;font-size:14px;}
+
+  /* ---------- 产品卡片 ---------- */
+  .grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:18px;}
+  .card{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    box-shadow:0 5px 16px rgba(60,40,10,.06);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;}
+  .card:hover{box-shadow:0 12px 30px rgba(60,40,10,.14);}
+  .card-head{display:flex;align-items:center;gap:9px;padding:12px 14px 9px;background:linear-gradient(90deg,#fff7e8,#fff);border-bottom:1px solid var(--line);}
+  .card-head .idx{font-size:11px;color:#fff;background:var(--amber);border-radius:18px;padding:3px 9px;font-weight:700;}
+  .card-head .item{font-size:18px;font-weight:800;color:var(--dark);}
+  .card-photo{background:#f1ece0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--line);position:relative;aspect-ratio:1/1;}
+  .card-photo img{width:100%;height:100%;object-fit:contain;display:block;}
+  .card-photo.ph{aspect-ratio:1/1;}
+  .card-photo.ph .ph-icon{font-size:42px;opacity:.3;}
+
+  /* ---------- 多视角轮播 ---------- */
+  .carousel{position:absolute;inset:0;display:flex;align-items:stretch;touch-action:pan-y;user-select:none;}
+  .car-track{display:flex;width:100%;height:100%;transition:transform .38s cubic-bezier(.22,.61,.36,1);will-change:transform;}
+  .car-slide{flex:0 0 100%;height:100%;}
+  .car-slide img{width:100%;height:100%;object-fit:contain;display:block;-webkit-user-drag:none;user-select:none;pointer-events:none;}
+  .car-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;
+    background:rgba(36,26,14,.5);color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .2s,background .2s;z-index:4;cursor:pointer;}
+  .card-photo:hover .car-nav{opacity:1;}
+  .car-prev{left:6px;} .car-next{right:6px;}
+  .car-nav:hover{background:rgba(36,26,14,.78);}
+  .car-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:7px 9px;background:linear-gradient(0deg,rgba(0,0,0,.5),transparent);z-index:4;}
+  .car-counter{color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6);letter-spacing:.5px;}
+  .car-dots{display:flex;gap:5px;}
+  .car-dot{width:7px;height:7px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.55);cursor:pointer;transition:.2s;}
+  .car-dot.on{background:#fff;transform:scale(1.3);}
+  .car-add{position:absolute;top:7px;right:7px;z-index:5;background:rgba(232,163,61,.94);color:#fff;border:0;border-radius:8px;
+    font-size:12px;font-weight:700;padding:4px 8px;cursor:pointer;display:none;}
+  .car-rm{position:absolute;top:7px;left:7px;z-index:5;background:rgba(192,57,43,.92);color:#fff;border:0;border-radius:50%;
+    width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;}
+  .editing .car-add,.editing .car-rm{display:flex;}
+  .car-up{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(36,26,14,.55);color:#fff;
+    font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;z-index:3;pointer-events:none;
+    opacity:0;transition:opacity .18s;}
+  .card-photo:hover .car-up{opacity:1;}
+  .car-hint-swipe{position:absolute;top:7px;left:7px;background:rgba(36,26,14,.5);color:#fff;font-size:10px;
+    padding:2px 7px;border-radius:6px;z-index:4;pointer-events:none;}
+  .card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;flex:1;}
+  .specs{display:flex;flex-direction:column;gap:5px;}
+  .spec{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px dashed #efe6d3;padding-bottom:4px;}
+  .spec .sk{color:var(--muted);white-space:nowrap;}
+  .spec .sv{color:var(--ink);text-align:right;font-weight:600;}
+  .price-block{margin-top:auto;background:#fff8ec;border:1px solid #f0e2c4;border-radius:11px;padding:9px 11px;}
+  .pb-title{font-size:11px;color:var(--amber-d);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-weight:700;}
+  .tiers{display:flex;flex-wrap:wrap;gap:7px;}
+  .tier{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #ecd9af;border-radius:9px;padding:4px 9px;}
+  .tier .t-price{font-weight:800;color:var(--dark);font-size:15px;}
+  .tier .t-moq{font-size:11px;color:var(--muted);}
+  .tier .x{cursor:pointer;color:#c0392b;font-weight:700;padding:0 2px;}
+  .add-tier{font-size:11px;color:var(--amber-d);border:1px dashed var(--amber);background:#fff;border-radius:8px;padding:3px 8px;}
+
+  /* ---------- 图廊 ---------- */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+  .g-item{position:relative;border-radius:11px;overflow:hidden;border:1px solid var(--line);background:#fff;aspect-ratio:1/1;display:block;transition:transform .15s;}
+  .g-item:hover{transform:scale(1.03);}
+  .g-item img{width:100%;height:100%;object-fit:contain;display:block;}
+
+  /* 图片比例切换：作用于产品图与图廊图（cover 填满无白边，原图模式按真实比例显示） */
+  #canvas.r-1-1 .card-photo,#canvas.r-1-1 .g-item{aspect-ratio:1/1;}
+  #canvas.r-4-3 .card-photo,#canvas.r-4-3 .g-item{aspect-ratio:4/3;}
+  #canvas.r-16-9 .card-photo,#canvas.r-16-9 .g-item{aspect-ratio:16/9;}
+  #canvas.r-3-2 .card-photo,#canvas.r-3-2 .g-item{aspect-ratio:3/2;}
+  #canvas.r-auto .card-photo,#canvas.r-auto .g-item{aspect-ratio:auto;}
+  #canvas.r-auto .card-photo.ph{aspect-ratio:1/1;}
+  .g-del{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(192,57,43,.9);color:#fff;border:0;font-size:14px;line-height:1;display:none;align-items:center;justify-content:center;}
+
+  /* ---------- 编辑态 ---------- */
+  .editing .card{cursor:grab;}
+  .editing .card.dragging{opacity:.4;}
+  .editing [contenteditable="true"]{border-radius:4px;padding:1px 3px;cursor:text;transition:outline .12s,background .12s;}
+  .editing [contenteditable="true"]:hover{outline:1px dashed var(--amber);}
+  .editing [contenteditable="true"]:focus{outline:2px solid var(--amber);background:#fffdf5;}
+  .editing [contenteditable="true"]:empty:before{content:attr(data-ph);color:#bba;font-style:italic;}
+  .drag-handle{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:7px;background:rgba(36,26,14,.78);color:#fff;border:0;display:none;align-items:center;justify-content:center;font-size:14px;z-index:3;cursor:grab;}
+  .editing .drag-handle{display:flex;}
+  .card-del{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(192,57,43,.92);color:#fff;border:0;font-size:15px;display:none;align-items:center;justify-content:center;z-index:3;}
+  .editing .card-del{display:flex;}
+  .editing .g-del{display:flex;}
+  .editing .g-item{cursor:default;}
+  .add-prod{margin-top:16px;border:1px dashed var(--amber);background:#fff8ec;color:var(--amber-d);border-radius:11px;padding:11px;width:100%;font-weight:700;font-size:14px;display:none;}
+  .editing .add-prod{display:block;}
+
+  /* 图片可视化替换 */
+  .editing .card-photo.click-up,.editing .g-item.click-up{position:relative;cursor:pointer;}
+  .editing .card-photo.click-up:hover,.editing .g-item.click-up:hover{box-shadow:inset 0 0 0 9999px rgba(36,26,14,.42);}
+  .up-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;}
+  .add-img{margin-top:12px;border:1px dashed var(--amber);background:#fff8ec;color:var(--amber-d);border-radius:11px;padding:10px 16px;font-weight:700;font-size:13px;}
+
+  /* 颜色变体色块 */
+  .swatches{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding:9px 14px 10px;background:#fffaf0;border-top:1px solid var(--line);}
+  .sw-wrap{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
+  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0;transition:transform .12s;}
+  .swatch:hover{transform:scale(1.12);}
+  .swatch.on{box-shadow:0 0 0 2px var(--amber);}
+  .sw-dot{position:relative;display:inline-flex;}
+  .sw-color{width:20px;height:20px;border:1px solid var(--line);border-radius:5px;background:none;padding:0;margin-left:4px;cursor:pointer;align-self:center;}
+  .sw-color::-webkit-color-swatch-wrapper{padding:0;}
+  .sw-color::-webkit-color-swatch{border:none;border-radius:4px;}
+  .sw-color::-moz-color-swatch{border:none;border-radius:4px;}
+  .swatch-x{position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;background:#c0392b;color:#fff;border:0;font-size:10px;line-height:1;display:none;align-items:center;justify-content:center;z-index:2;cursor:pointer;}
+  .editing .swatch-x{display:flex;}
+  .sw-name{font-size:11px;color:var(--muted);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .editing .sw-name:hover{outline:1px dashed var(--amber);}
+  .add-color{font-size:11px;color:var(--amber-d);border:1px dashed var(--amber);background:#fff;border-radius:8px;padding:3px 8px;align-self:center;}
+
+  footer{background:var(--dark);color:#e9dcc0;padding:28px 22px;text-align:center;font-size:13px;}
+  footer b{color:var(--gold);}
+
+  /* ---------- Toast ---------- */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;
+    padding:11px 20px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;z-index:99;pointer-events:none;max-width:80vw;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media print{
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+    .toolbar{display:none!important;}
+    .viewport{padding:0;}
+    #canvas{box-shadow:none;border-radius:0;max-width:100%;zoom:1!important;transform:none!important;}
+    .drag-handle,.card-del,.g-del,.add-prod,.add-tier,.add-img,.up-hint,.car-nav,.car-bar,.car-add,.car-rm,.car-up,.car-hint-swipe,
+      .ph-file,.sw-color,.swatch-x,.add-color,.tier .x,.ed-hint{display:none!important;}
+    .editing [contenteditable]{outline:none!important;}
+    .editing [contenteditable]:empty:before{content:""!important;}  /* 隐藏空字段占位提示词（未填/留空/型号等） */
+    .cover{min-height:100vh;page-break-after:always;}
+    .card,.g-item{break-inside:avoid;}
+    section{padding:24px 0;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===== 工具栏 ===== -->
+  <div class="toolbar">
+    <div class="tb-title"><span class="dot"></span>Beer Tower 目录编辑器</div>
+    <div class="toggle" id="modeToggle">
+      <button data-mode="preview">预览</button>
+      <button data-mode="edit" class="on">编辑</button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group"><label>缩放</label><input type="range" id="zoom" min="60" max="140" value="100"><span id="zoomVal">100%</span></div>
+    <div class="tb-group"><label>列数</label><input type="range" id="cols" min="1" max="4" value="3"><span id="colsVal">3</span></div>
+    <div class="toggle" id="ratioToggle" title="图片展示比例">
+      <button data-ratio="auto">原图</button>
+      <button data-ratio="1:1" class="on">1:1</button>
+      <button data-ratio="4:3">4:3</button>
+      <button data-ratio="16:9">16:9</button>
+      <button data-ratio="3:2">3:2</button>
+    </div>
+    <div class="tb-group"><label>主题色</label><input type="color" id="accent" value="#E8A33D"></div>
+    <div class="tb-group"><label><input type="checkbox" id="showCover" checked> 封面</label></div>
+    <div class="tb-sep"></div>
+    <button class="btn" id="btnExport">⬇ 导出数据</button>
+    <button class="btn primary" id="btnPrint">🖨 打印 / PDF</button>
+  </div>
+
+  <div class="viewport">
+    <div id="canvas"><!-- 渲染区 --></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="catalog-data.js"></script>
+  <script>
+  (function(){
+    // 防御性读取：兼容 `const CATALOG`（全局词法）与 `window.CATALOG=` 两种声明
+    const C = (typeof CATALOG !== 'undefined') ? CATALOG : (window.CATALOG || null);
+    const canvas = document.getElementById('canvas');
+    if(!C){ canvas.innerHTML='<p style="padding:40px">未找到 catalog-data.js</p>'; return; }
+    const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const state = { edit:true, zoom:100, cols:3, showCover:true, imgRatio:'1:1' };
+    const selColor = {};  // 每款产品当前选中的颜色下标
+    const selAngle = {};  // 每款产品当前选中的视角（多图）下标
+    let fileTarget = null; // 当前待写入的图片目标（模块级，确保 picker 的 change 监听与点击共享同一引用）
+
+    function getPath(o,p){ return p.split('.').reduce((a,k)=> (a==null?undefined:a[k]), o); }
+    function setPath(o,p,v){
+      const ks=p.split('.'); let t=o;
+      for(let i=0;i<ks.length-1;i++){ const k=ks[i]; if(t[k]==null) t[k]=/^\d+$/.test(ks[i+1])?[]:{}; t=t[k]; }
+      t[ks[ks.length-1]]=v;
+    }
+
+    // 图片地址：支持内联 dataURL 或直接引用 assets 下的文件名
+    function imgSrc(name, kind){
+      if(!name) return '';
+      if(name.indexOf('data:')===0) return name;
+      return (kind==='thumb' ? 'assets/thumbs/' : 'assets/photos/') + name;
+    }
+
+    // 取某款产品、当前选色下的多视角图片数组（优先用颜色 photos，回退到产品 photos/photo）
+    function getPhotos(p, i){
+      const ci = selColor[i] ?? 0;
+      if(p.colors && p.colors.length){
+        const c = p.colors[ci] || p.colors[0];
+        if(c && c.photos && c.photos.length) return c.photos;
+        if(c && c.photo) return [c.photo];
+      }
+      if(p.photos && p.photos.length) return p.photos;
+      if(p.photo) return [p.photo];
+      return [];
+    }
+
+    function render(){
+      canvas.innerHTML =
+        (state.showCover ? renderCover() : '') +
+        renderProductsSection() +
+        renderGallerySection() +
+        renderFooter();
+      bindInline();
+      applyAutoRatios();
+    }
+
+    function renderCover(){
+      const b=C.brand||{};
+      return `<header class="cover">
+        <div class="kicker" ${ed('brand.name')}>${esc(b.name||'Brand')}</div>
+        <div class="tap">🍺</div>
+        <h1 ${ed('title.zh')}>${esc((C.title&&C.title.zh)||'BEER TOWER CATALOG')}</h1>
+        <div class="sub" ${ed('title.en')}>${esc((C.title&&C.title.en)||'')}</div>
+        <div class="meta">
+          ${fld(b.contact,'Contact','brand.contact')}
+          ${fld(b.tel,'Tel','brand.tel')}
+          ${fld(b.fax,'Fax','brand.fax')}
+          ${fld(b.mob,'Mob','brand.mob')}
+          ${fld(b.web,'Web','brand.web')}
+          ${fld(b.email,'Email','brand.email')}
+        </div>
+        <div class="foot"><span ${ed('brand.name')}>${esc(b.name||'')}</span> · <span ${ed('year')}>${esc(C.year||'')}</span> <span ${ed('coverFootLabel')}>${esc(C.coverFootLabel||'PRODUCT CATALOG')}</span></div>
+      </header>`;
+    }
+    function fld(v,label,path){
+      if(v==null&&!state.edit) return '';
+      return `<div><b>${label}</b><span ${ed(path)} ${ph('未填')}>${esc(v)||''}</span></div>`;
+    }
+
+    function renderProductsSection(){
+      const ps=C.products||[];
+      const cards=ps.map((p,i)=>renderCard(p,i)).join('');
+      const lead=(C.intro||'').replace(/\{n\}/g,ps.length);
+      return `<section><div class="wrap">
+        <div class="sec-title"><h2 ${ed('title')}>产品目录</h2><span class="en">Product Catalog</span></div>
+        <div class="sec-line"></div>
+        <p class="lead" ${ed('intro')}>${lead}</p>
+        <div class="grid" id="grid">${cards}</div>
+        <button class="add-prod" data-action="add-product">＋ 添加一款产品</button>
+      </div></section>`;
+    }
+    function renderCard(p,i){
+      const specs=[];
+      if(p.capacity) specs.push(['容量',p.capacity,'capacity']);
+      if(p.material) specs.push(['材质',p.material,'material']);
+      if(p.desc)     specs.push(['规格',p.desc,'desc']);
+      if(p.packing)  specs.push(['包装',p.packing,'packing']);
+      if(p.meas)     specs.push(['外箱',p.meas,'meas']);
+      if(p.weight)   specs.push(['毛/净重',p.weight,'weight']);
+      if(p.load)     specs.push(['装柜',p.load,'load']);
+      const specHtml=specs.map(([k,v,key])=>`<div class="spec"><span class="sk">${k}</span><span class="sv" ${ed('products.'+i+'.'+key)} ${ph('未填')}>${esc(v)}</span></div>`).join('');
+
+      const tiers=(p.prices||[]).map((t,ti)=>`
+        <div class="tier">
+          <span class="t-price" ${ed('products.'+i+'.prices.'+ti+'.price')} ${ph('价')}>${esc(t.price)}</span>
+          <span class="t-moq" ${ed('products.'+i+'.prices.'+ti+'.moq')} ${ph('MOQ')}>${esc(t.moq)||'—'}</span>
+          ${state.edit?`<span class="x" data-action="del-tier" data-i="${i}" data-ti="${ti}">×</span>`:''}
+        </div>`).join('');
+      const tiersBlock = state.edit
+        ? `<div class="tiers">${tiers}<button class="add-tier" data-action="add-tier" data-i="${i}">＋ 加价</button></div>`
+        : `<div class="tiers">${tiers||'<span class="t-moq">面议 / Quote</span>'}</div>`;
+
+      // 配图：当前选色下的多视角轮播；编辑态点图替换当前视角、＋加图、×删图
+      const photos = getPhotos(p, i);
+      const ai0 = Math.min(selAngle[i] ?? 0, Math.max(0, photos.length - 1));
+      let photo;
+      if(photos.length){
+        const slides = photos.map((src,k)=>`<div class="car-slide"><img loading="lazy" src="${imgSrc(src,'photo')}" alt="${esc(p.item)} 视角${k+1}"></div>`).join('');
+        const dots = photos.map((_,k)=>`<button class="car-dot ${k===ai0?'on':''}" data-action="car-dot" data-i="${i}" data-k="${k}" title="第${k+1}张"></button>`).join('');
+        photo = `<div class="card-photo ${state.edit?'click-up':''}" ${state.edit?`data-action="up-photo" data-i="${i}"`:''}>
+          <div class="carousel" data-i="${i}" data-ai="${ai0}">
+            <div class="car-track" style="transform:translateX(-${ai0*100}%)">${slides}</div>
+            ${photos.length>1?`<button class="car-nav car-prev" data-action="car-prev" data-i="${i}" title="上一张">‹</button>
+              <button class="car-nav car-next" data-action="car-next" data-i="${i}" title="下一张">›</button>`:''}
+            <div class="car-bar">
+              <span class="car-counter"><span class="car-cur">${ai0+1}</span>/<span class="car-total">${photos.length}</span></span>
+              <span class="car-dots">${dots}</span>
+            </div>
+            ${state.edit?`<button class="car-add" data-action="add-angle" data-i="${i}" title="添加该颜色的第${photos.length+1}张视角">＋加图</button>`:''}
+            ${state.edit&&photos.length>1?`<button class="car-rm" data-action="rm-angle" data-i="${i}" title="删除当前视角">×</button>`:''}
+            ${!state.edit&&photos.length>1?`<span class="car-hint-swipe">← 滑动浏览 →</span>`:''}
+            ${state.edit?`<span class="car-up">点击替换当前视角</span>`:''}
+          </div>
+        </div>`;
+      } else {
+        photo = `<div class="card-photo ph ${state.edit?'click-up':''}" ${state.edit?`data-action="up-photo" data-i="${i}"`:''}>
+           <div class="ph-icon">🍺</div>${state.edit?'<span class="up-hint">🖼 点击上传</span>':''}
+         </div>`;
+      }
+      const swatches = renderSwatches(p,i);
+
+      return `<article class="card" draggable="${state.edit}" data-i="${i}">
+        <button class="drag-handle" title="拖拽排序">⠿</button>
+        <button class="card-del" data-action="del-product" data-i="${i}" title="删除">×</button>
+        <div class="card-head"><span class="idx">#${String(i+1).padStart(2,'0')}</span>
+          <span class="item" ${ed('products.'+i+'.item')} ${ph('型号')}>${esc(p.item)}</span></div>
+        ${photo}
+        ${swatches}
+        <div class="card-body">
+          <div class="specs">${specHtml}</div>
+          <div class="price-block">
+            <div class="pb-title">${esc(C.priceLabel||'出厂价 (不含税) / Ex-works')}</div>
+            ${tiersBlock}
+          </div>
+          ${state.edit?`<div class="ph-file" style="font-size:11px;color:var(--muted)">配图文件名: <span ${ed('products.'+i+'.photo')} ${ph('留空')}>${esc(p.photo)||'（无）'}</span></div>`:''}
+        </div>
+      </article>`;
+    }
+
+    function renderSwatches(p,i){
+      if(!p.colors || !p.colors.length){
+        return state.edit ? `<div class="swatches"><button class="add-color" data-action="add-color" data-i="${i}">＋ 加颜色</button></div>` : '';
+      }
+      const ci = selColor[i] ?? 0;
+      const items = p.colors.map((c,ci2)=>`
+        <span class="sw-wrap">
+          <span class="sw-dot">
+            <button class="swatch ${ci2===ci?'on':''}" data-action="swatch" data-i="${i}" data-ci="${ci2}"
+              style="background:${esc(c.hex||'#ccc')}" title="${esc(c.name||'颜色')}"></button>
+            ${state.edit?`<button class="swatch-x" data-action="del-color" data-i="${i}" data-ci="${ci2}" title="删除颜色">×</button>`:''}
+          </span>
+          ${state.edit?`<input type="color" class="sw-color" data-i="${i}" data-ci="${ci2}" value="${esc(c.hex||'#cccccc')}" title="点击修改该颜色色值">`:''}
+          ${state.edit?`<span class="sw-name" ${ed('products.'+i+'.colors.'+ci2+'.name')} ${ph('颜色名')}>${esc(c.name)}</span>`:''}
+        </span>`).join('');
+      const add = state.edit ? `<button class="add-color" data-action="add-color" data-i="${i}">＋ 加颜色</button>` : '';
+      return `<div class="swatches">${items}${add}</div>`;
+    }
+
+    function renderGallerySection(){
+      const g=(C.gallery||[]);
+      const items=g.map((fn,k)=> state.edit
+        ? `<div class="g-item click-up" data-action="up-img" data-k="${k}" data-src="${esc(fn)}">
+             <img loading="lazy" src="${imgSrc(fn,'thumb')}" alt="${esc(fn)}">
+             <button class="g-del" data-action="del-img" data-src="${esc(fn)}">×</button>
+             <span class="up-hint">🖼 替换</span>
+           </div>`
+        : `<a class="g-item" href="assets/photos/${esc(fn)}" target="_blank">
+             <img loading="lazy" src="${imgSrc(fn,'thumb')}" alt="${esc(fn)}">
+           </a>`).join('');
+      return `<section style="background:#fffaf0"><div class="wrap">
+        <div class="sec-title"><h2>实拍图廊</h2><span class="en">Photo Gallery</span></div>
+        <div class="sec-line"></div>
+        <p class="lead">产品实拍展示（点击查看大图）。共 ${g.length} 张${state.edit?'<span class="ed-hint">，点击图片可替换，右上角 × 可移除，下方可添加新图</span>':''}。</p>
+        <div class="gallery" id="gallery">${items}</div>
+        ${state.edit?`<button class="add-img" data-action="add-img">＋ 添加图片</button>`:''}
+      </div></section>`;
+    }
+    function footerFld(v,path){ return (v==null||v==='')?'':`<span ${ed(path)}>${esc(v)}</span>`; }
+    function renderFooter(){
+      const b=C.brand||{};
+      const l1=[footerFld(b.tel,'brand.tel'),footerFld(b.fax,'brand.fax'),footerFld(b.mob,'brand.mob')].filter(Boolean).join(' &nbsp;|&nbsp; ');
+      const l2=[footerFld(b.web,'brand.web'),footerFld(b.email,'brand.email')].filter(Boolean).join(' &nbsp;|&nbsp; ');
+      return `<footer><div><b ${ed('brand.name')}>${esc(b.name||'')}</b>${b.cn?` · <span ${ed('brand.cn')}>${esc(b.cn)}</span>`:''}</div>
+        ${l1?`<div style="margin-top:8px">${l1}</div>`:''}
+        ${l2?`<div style="margin-top:8px">${l2}</div>`:''}
+      </footer>`;
+    }
+
+    // contenteditable helper attrs
+    function ed(path){ return state.edit?`contenteditable="true" data-path="${path}"`:''; }
+    function ph(t){ return state.edit?`data-ph="${t}"`:''; }
+
+    // inline edit: update model on input
+    function bindInline(){
+      canvas.querySelectorAll('[contenteditable="true"]').forEach(el=>{
+        el.addEventListener('input',()=>{
+          let v=el.textContent.replace(/ /g,' ').trim();
+          setPath(C, el.dataset.path, v);
+        });
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); el.blur(); }});
+      });
+      // 颜色取色器：实时改 hex 并刷新色块
+      canvas.querySelectorAll('.sw-color').forEach(inp=>{
+        inp.addEventListener('input',()=>{
+          const i=+inp.dataset.i, ci=+inp.dataset.ci;
+          if(!C.products[i] || !C.products[i].colors) return;
+          C.products[i].colors[ci].hex = inp.value;
+          const sw=inp.closest('.sw-wrap').querySelector('.swatch');
+          if(sw) sw.style.background = inp.value;
+        });
+      });
+      bindActions();
+      bindDnD();
+      bindLightbox();
+      bindImageUpload();
+      bindColorSwitch();
+      bindCarousel();
+    }
+
+    function bindActions(){
+      canvas.querySelectorAll('[data-action]').forEach(btn=>{
+        btn.addEventListener('click',e=>{
+          e.preventDefault(); e.stopPropagation();
+          const a=btn.dataset.action;
+          if(a==='add-product'){
+            C.products.push({item:'NEW',desc:'',capacity:'',material:'',packing:'',meas:'',weight:'',load:'',prices:[{price:'',moq:''}],photo:''});
+            render(); toast('已添加一款新产品');
+          } else if(a==='del-product'){
+            C.products.splice(+btn.dataset.i,1); render(); toast('已删除该产品');
+          } else if(a==='add-tier'){
+            const i=+btn.dataset.i; C.products[i].prices.push({price:'',moq:''}); render();
+          } else if(a==='del-tier'){
+            const i=+btn.dataset.i, ti=+btn.dataset.ti; C.products[i].prices.splice(ti,1); render();
+          } else if(a==='del-img'){
+            const src=btn.dataset.src; const k=C.gallery.indexOf(src); if(k>=0) C.gallery.splice(k,1); render();
+          } else if(a==='add-color'){
+            const i=+btn.dataset.i; if(!C.products[i].colors) C.products[i].colors=[];
+            C.products[i].colors.push({name:'新颜色',hex:'#cccccc',photo:''}); render(); toast('已添加颜色，点色块可上传该颜色图片');
+          } else if(a==='del-color'){
+            const i=+btn.dataset.i, ci=+btn.dataset.ci; C.products[i].colors.splice(ci,1); render(); toast('已删除该颜色');
+          } else if(a==='car-prev'||a==='car-next'){
+            const car=btn.closest('.carousel'); const i=+btn.dataset.i;
+            gotoSlide(car, i, (selAngle[i]??0) + (a==='car-next'?1:-1));
+          } else if(a==='car-dot'){
+            const car=btn.closest('.carousel'); gotoSlide(car, +btn.dataset.i, +btn.dataset.k);
+          } else if(a==='rm-angle'){
+            const i=+btn.dataset.i; const pr=C.products[i]; const k=selColor[i]??0;
+            const c=pr.colors&&pr.colors[k]; const arr=c?c.photos:(pr.photos||[]);
+            const ai=selAngle[i]??0;
+            if(arr.length>1){ arr.splice(ai,1); selAngle[i]=Math.max(0,ai-1); render(); toast('已删除当前视角'); }
+            else { render(); toast('至少保留 1 张视角（可点击图片替换）'); }
+          }
+        });
+      });
+    }
+
+    // drag & drop reorder
+    let dragEl=null;
+    function bindDnD(){
+      if(!state.edit) return;
+      canvas.querySelectorAll('.card').forEach(card=>{
+        card.addEventListener('dragstart',()=>{ dragEl=card; setTimeout(()=>card.classList.add('dragging'),0); });
+        card.addEventListener('dragend',()=>{ card.classList.remove('dragging'); dragEl=null; });
+        card.addEventListener('dragover',e=>{ e.preventDefault(); });
+        card.addEventListener('drop',e=>{
+          e.preventDefault();
+          if(!dragEl||dragEl===card) return;
+          const from=+dragEl.dataset.i, to=+card.dataset.i;
+          const arr=C.products; const [m]=arr.splice(from,1); arr.splice(to,0,m);
+          render();
+        });
+      });
+    }
+
+    // image upload / replace (edit mode) —— 浏览器内完成，导出后持久化
+    function bindImageUpload(){
+      if(!state.edit) return;
+      let picker=document.getElementById('imgPicker');
+      if(!picker){
+        picker=document.createElement('input');
+        picker.type='file'; picker.id='imgPicker'; picker.accept='image/*'; picker.style.display='none';
+        document.body.appendChild(picker);
+        picker.addEventListener('change',()=>{
+          const f=picker.files&&picker.files[0];
+          if(!f||!fileTarget){ picker.value=''; return; }
+          const r=new FileReader();
+          r.onload=()=>{
+            const dataURL=r.result;
+            if(fileTarget.action==='up-photo'){
+              const pr=C.products[fileTarget.i]; const k=selColor[fileTarget.i]??0;
+              const c=pr.colors&&pr.colors[k];
+              const arr = c ? (c.photos=c.photos||[]) : (pr.photos=pr.photos||[]);
+              const car=canvas.querySelector('.carousel[data-i="'+fileTarget.i+'"]');
+              const ai = car ? (+(car.dataset.ai||0)) : 0;
+              if(ai>=arr.length) arr.push(dataURL); else arr[ai]=dataURL;
+            }
+            else if(fileTarget.action==='add-angle'){
+              const pr=C.products[fileTarget.i]; const k=selColor[fileTarget.i]??0;
+              const c=pr.colors&&pr.colors[k];
+              if(c){ c.photos=c.photos||[]; c.photos.push(dataURL); }
+              else { pr.photos=pr.photos||[]; pr.photos.push(dataURL); }
+            }
+            else if(fileTarget.action==='up-img'){ C.gallery[fileTarget.k]=dataURL; }
+            else if(fileTarget.action==='add-img'){ C.gallery.push(dataURL); }
+            render(); toast('图片已更新（点「导出数据」后持久化）');
+          };
+          r.readAsDataURL(f);
+          picker.value='';
+        });
+      }
+      canvas.querySelectorAll('[data-action="up-photo"],[data-action="up-img"],[data-action="add-img"],[data-action="add-angle"]').forEach(el=>{
+        el.addEventListener('click',e=>{
+          e.preventDefault(); e.stopPropagation();
+          fileTarget={action:el.dataset.action, i:+(el.dataset.i||0), k:+(el.dataset.k||0), ci:+(el.dataset.ci||0)};
+          picker.click();
+        });
+      });
+    }
+
+    // 点色块切换颜色：图片展示区自动更新为该颜色的多视角图片集（编辑/预览均生效）
+    function bindColorSwitch(){
+      canvas.querySelectorAll('.swatch[data-action="swatch"]').forEach(b=>{
+        b.addEventListener('click',e=>{
+          if(state.edit){ e.preventDefault(); e.stopPropagation(); }
+          const i=+b.dataset.i, ci=+b.dataset.ci;
+          selColor[i]=ci;
+          selAngle[i]=0;                 // 切换颜色时重置到第 1 张视角
+          render();                      // 整卡重渲染，轮播同步为新颜色的视角集
+        });
+      });
+    }
+
+    // 多视角轮播：跳转到指定视角
+    function gotoSlide(car, i, idx, animate){
+      const total = getPhotos(C.products[i], i).length || 1;
+      idx = Math.max(0, Math.min(total - 1, idx));
+      selAngle[i] = idx;
+      const track = car.querySelector('.car-track');
+      track.style.transition = (animate===false) ? 'none' : '';
+      track.style.transform = `translateX(-${idx*100}%)`;
+      car.dataset.ai = idx;
+      const cur = car.querySelector('.car-cur'); if(cur) cur.textContent = idx + 1;
+      car.querySelectorAll('.car-dot').forEach((d,k)=>d.classList.toggle('on', k===idx));
+    }
+
+    // 多视角轮播：指针拖拽 / 触摸滑动 + 流畅过渡
+    function bindCarousel(){
+      canvas.querySelectorAll('.carousel').forEach(car=>{
+        const i = +car.dataset.i;
+        let startX=0, startIdx=0, w=1, dragging=false;
+        const track = car.querySelector('.car-track');
+        car.addEventListener('pointerdown',e=>{
+          if(e.target.closest('button')) return;     // 按钮不触发滑动
+          dragging=true; startX=e.clientX; startIdx=selAngle[i]??0; w=car.clientWidth||1;
+          track.style.transition='none'; try{ car.setPointerCapture(e.pointerId); }catch(_){}
+        });
+        car.addEventListener('pointermove',e=>{
+          if(!dragging) return;
+          const dx=e.clientX-startX;
+          track.style.transform=`translateX(${-startIdx*100 + (dx/w)*100}%)`;
+        });
+        const end=()=>{
+          if(!dragging) return; dragging=false;
+          track.style.transition='';
+          const dx = (typeof lastX!=='undefined' ? lastX-startX : 0);
+          const moved = Math.abs(dx) > w*0.18;
+          let idx = startIdx;
+          if(moved) idx = dx<0 ? Math.min((getPhotos(C.products[i],i).length||1)-1, idx+1) : Math.max(0, idx-1);
+          gotoSlide(car, i, idx);
+        };
+        let lastX;
+        car.addEventListener('pointermove',e=>{ lastX=e.clientX; });
+        car.addEventListener('pointerup',end);
+        car.addEventListener('pointercancel',()=>{ dragging=false; track.style.transition=''; gotoSlide(car,i,selAngle[i]??0); });
+      });
+    }
+
+    // r-auto 模式：按首图真实比例设置容器高度，避免白边
+    function applyAutoRatios(){
+      if(state.imgRatio!=='auto') return;
+      canvas.querySelectorAll('.card').forEach(card=>{
+        const ph=card.querySelector('.card-photo'); if(!ph) return;
+        const img=ph.querySelector('.car-slide img'); if(!img) return;
+        const set=()=>{ if(img.naturalWidth) ph.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight; };
+        if(img.complete) set(); else img.addEventListener('load',set);
+      });
+    }
+
+    // lightbox (preview mode)
+    function bindLightbox(){
+      if(state.edit) return;
+      canvas.querySelectorAll('.g-item').forEach(a=>{
+        a.addEventListener('click',e=>{
+          e.preventDefault();
+          const ov=document.createElement('div');
+          ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out';
+          const img=document.createElement('img'); img.src=a.getAttribute('href');
+          img.style.cssText='max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+          ov.appendChild(img); ov.addEventListener('click',()=>ov.remove());
+          document.body.appendChild(ov);
+        });
+      });
+    }
+
+    // ---------- toolbar ----------
+    function applyZoom(){ canvas.style.zoom=state.zoom+'%'; document.getElementById('zoomVal').textContent=state.zoom+'%'; }
+    function applyCols(){ document.documentElement.style.setProperty('--cols',state.cols); document.getElementById('colsVal').textContent=state.cols; }
+    const RATIOS=['r-1-1','r-4-3','r-16-9','r-3-2','r-auto'];
+    function applyRatio(){ RATIOS.forEach(r=>canvas.classList.remove(r)); canvas.classList.add('r-'+state.imgRatio.replace(':','-')); document.querySelectorAll('#ratioToggle button').forEach(b=>b.classList.toggle('on',b.dataset.ratio===state.imgRatio)); }
+    function applyMode(){ canvas.classList.toggle('editing', state.edit); }
+    function applyAccent(hex){
+      document.documentElement.style.setProperty('--amber',hex);
+      document.documentElement.style.setProperty('--amber-d',shade(hex,-28));
+      document.documentElement.style.setProperty('--gold',shade(hex,38));
+    }
+    function shade(hex,p){
+      const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+      r=Math.max(0,Math.min(255,r+Math.round(255*p/100)));
+      g=Math.max(0,Math.min(255,g+Math.round(255*p/100)));
+      b=Math.max(0,Math.min(255,b+Math.round(255*p/100)));
+      return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+    }
+
+    document.getElementById('modeToggle').addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      state.edit = b.dataset.mode==='edit';
+      [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+      applyMode(); render();
+    });
+    document.getElementById('zoom').addEventListener('input',e=>{ state.zoom=+e.target.value; applyZoom(); savePrefs(); });
+    document.getElementById('cols').addEventListener('input',e=>{ state.cols=+e.target.value; applyCols(); savePrefs(); });
+    document.getElementById('accent').addEventListener('input',e=>{ applyAccent(e.target.value); savePrefs(); });
+    document.getElementById('showCover').addEventListener('change',e=>{ state.showCover=e.target.checked; render(); savePrefs(); });
+    document.getElementById('ratioToggle').addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      state.imgRatio=b.dataset.ratio; applyRatio(); savePrefs();
+    });
+    document.getElementById('btnPrint').addEventListener('click',()=>window.print());
+    document.getElementById('btnExport').addEventListener('click',exportData);
+
+    const PREFS='bt_cat_prefs_v1';
+    function savePrefs(){ try{ localStorage.setItem(PREFS, JSON.stringify({zoom:state.zoom,cols:state.cols,imgRatio:state.imgRatio,showCover:state.showCover,accent:document.getElementById('accent').value})); }catch(e){} }
+    function loadPrefs(){
+      try{
+        const p=JSON.parse(localStorage.getItem(PREFS)); if(!p) return;
+        state.zoom=(p.zoom??100); state.cols=(p.cols??3); state.imgRatio=(p.imgRatio||'1:1');
+        state.showCover=(p.showCover!==false);
+        if(p.accent) document.getElementById('accent').value=p.accent;
+        if(p.showCover===false) document.getElementById('showCover').checked=false;
+      }catch(e){}
+    }
+
+    function exportData(){
+      const header=`/* =====================================================================
+ *  Beer Tower / Tap Tower 产品目录 —— 可编辑数据文件（由编辑器导出）
+ *  修改说明见 README；可直接手动编辑本文件，或回到 editor.html 可视化编辑。
+ * ===================================================================== */
+
+`;
+      const js=header+'window.CATALOG = '+JSON.stringify(C,null,2)+';\n';
+      const blob=new Blob([js],{type:'text/javascript;charset=utf-8'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='catalog-data.js'; a.click();
+      toast('已导出 catalog-data.js（下载后覆盖原文件，刷新即可生效）');
+    }
+
+    let toastT;
+    function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+      clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+    // init
+    loadPrefs(); applyZoom(); applyCols(); applyAccent(document.getElementById('accent').value); applyMode(); applyRatio(); render();
+  })();
+  </script>
+</body>
+</html>

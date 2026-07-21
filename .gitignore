@@ -1,0 +1,6 @@
+.workbuddy/
+deploy.zip
+gen_data.py
+pack.py
+node_modules/
+*.log

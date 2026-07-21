@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beer Tower / Tap Tower 产品目录</title>
+<style>
+  :root {
+    --amber:#E8A33D; --amber-d:#C8821C; --gold:#F2C879;
+    --ink:#1c140a; --dark:#241a0e; --paper:#fbf6ec; --line:#e7dcc6;
+    --muted:#8a7a5f;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.5; }
+  a { color:inherit; text-decoration:none; }
+
+  /* ---------- COVER ---------- */
+  .cover { position:relative; min-height:92vh; display:flex; flex-direction:column;
+    justify-content:center; align-items:center; text-align:center; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%, #3a2a12 0%, #1c140a 60%, #120c05 100%);
+    color:#fff; padding:48px 24px; }
+  .cover::before { content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(60% 50% at 50% 120%, rgba(232,163,61,.35), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,.03) 0 2px, transparent 2px 22px); }
+  .cover .kicker { letter-spacing:.5em; font-size:13px; color:var(--gold); text-transform:uppercase;
+    border:1px solid rgba(242,200,121,.5); padding:8px 18px; border-radius:30px; position:relative; }
+  .cover h1 { font-size:clamp(38px,7vw,82px); margin:26px 0 6px; font-weight:800;
+    background:linear-gradient(180deg,#fff,var(--gold)); -webkit-background-clip:text;
+    background-clip:text; color:transparent; letter-spacing:.02em; position:relative; }
+  .cover .sub { font-size:clamp(15px,2.4vw,22px); color:#f3e4c5; position:relative; }
+  .cover .tap { font-size:64px; margin:10px 0 4px; position:relative; filter:drop-shadow(0 6px 18px rgba(232,163,61,.5)); }
+  .cover .meta { margin-top:34px; display:flex; gap:28px; flex-wrap:wrap; justify-content:center;
+    position:relative; color:#e9dcc0; font-size:14px; }
+  .cover .meta div { background:rgba(255,255,255,.06); border:1px solid rgba(242,200,121,.25);
+    padding:12px 18px; border-radius:12px; min-width:160px; }
+  .cover .meta b { display:block; color:var(--gold); font-size:12px; letter-spacing:.1em;
+    text-transform:uppercase; margin-bottom:4px; font-weight:600; }
+  .cover .foot { position:absolute; bottom:18px; font-size:12px; color:#9c8a68; letter-spacing:.2em; }
+
+  /* ---------- LAYOUT ---------- */
+  .wrap { max-width:1200px; margin:0 auto; padding:0 22px; }
+  section { padding:54px 0; }
+  .sec-title { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .sec-title h2 { font-size:30px; margin:0; color:var(--dark); }
+  .sec-title .en { color:var(--amber-d); font-size:14px; letter-spacing:.2em; text-transform:uppercase; }
+  .sec-line { height:3px; background:linear-gradient(90deg,var(--amber),transparent);
+    border-radius:3px; margin:10px 0 30px; }
+  .lead { color:var(--muted); margin:0 0 26px; max-width:760px; }
+
+  /* ---------- CARDS ---------- */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:22px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    box-shadow:0 6px 20px rgba(60,40,10,.07); display:flex; flex-direction:column;
+    transition:transform .18s ease, box-shadow .18s ease; }
+  .card:hover { transform:translateY(-4px); box-shadow:0 14px 34px rgba(60,40,10,.16); }
+  .card-head { display:flex; align-items:center; gap:10px; padding:14px 16px 10px;
+    background:linear-gradient(90deg,#fff7e8,#fff); border-bottom:1px solid var(--line); }
+  .card-head .idx { font-size:12px; color:#fff; background:var(--amber); border-radius:20px;
+    padding:3px 10px; font-weight:700; }
+  .card-head .item { font-size:19px; font-weight:800; color:var(--dark); letter-spacing:.02em; }
+  .card-photo { height:190px; background:#f1ece0; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; border-bottom:1px solid var(--line); }
+  .card-photo img { width:100%; height:100%; object-fit:contain; }
+  .card-photo.ph .ph-icon { font-size:46px; opacity:.35; }
+  .swatches { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 16px;
+    background:#fffaf0; border-top:1px solid var(--line); }
+  .swatch { width:20px; height:20px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px var(--line); }
+  .sw-label { font-size:11px; color:var(--muted); margin-left:2px; }
+  .card-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+  .specs { display:flex; flex-direction:column; gap:6px; }
+  .spec { display:flex; justify-content:space-between; gap:12px; font-size:13px;
+    border-bottom:1px dashed #efe6d3; padding-bottom:5px; }
+  .spec .sk { color:var(--muted); white-space:nowrap; }
+  .spec .sv { color:var(--ink); text-align:right; font-weight:600; }
+  .price-block { margin-top:auto; background:#fff8ec; border:1px solid #f0e2c4; border-radius:12px;
+    padding:10px 12px; }
+  .pb-title { font-size:11px; color:var(--amber-d); text-transform:uppercase; letter-spacing:.12em;
+    margin-bottom:6px; font-weight:700; }
+  .tiers { display:flex; flex-wrap:wrap; gap:8px; }
+  .tier { display:flex; flex-direction:column; align-items:center; background:#fff;
+    border:1px solid #ecd9af; border-radius:9px; padding:5px 12px; min-width:78px; }
+  .t-price { font-weight:800; color:var(--dark); font-size:16px; }
+  .t-moq { font-size:11px; color:var(--muted); }
+  .t-price.muted { color:var(--muted); font-size:13px; font-weight:600; }
+
+  /* ---------- GALLERY ---------- */
+  .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .g-item { border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#fff;
+    aspect-ratio:1/1; display:block; transition:transform .15s; }
+  .g-item:hover { transform:scale(1.03); }
+  .g-item img { width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* ---------- FOOTER ---------- */
+  footer { background:var(--dark); color:#e9dcc0; padding:34px 22px; text-align:center; font-size:13px; }
+  footer b { color:var(--gold); }
+
+  /* ---------- PRINT ---------- */
+  @media print {
+    * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+    .cover { min-height:100vh; page-break-after:always; }
+    .card { break-inside:avoid; box-shadow:none; }
+    .g-item { break-inside:avoid; }
+    section { padding:24px 0; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ 渲染区：内容全部来自 catalog-data.js，无需修改此处 ============ -->
+  <header class="cover" id="cover"></header>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-title"><h2>产品目录</h2><span class="en" id="catEn">Product Catalog</span></div>
+      <div class="sec-line"></div>
+      <p class="lead" id="intro"></p>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section style="background:#fffaf0;">
+    <div class="wrap">
+      <div class="sec-title"><h2>实拍图廊</h2><span class="en">Photo Gallery</span></div>
+      <div class="sec-line"></div>
+      <p class="lead" id="galleryLead"></p>
+      <div class="gallery" id="gallery"></div>
+    </div>
+  </section>
+
+  <footer id="footer"></footer>
+
+  <!-- 可编辑数据文件：改这里的内容，保存后刷新本页面即可 -->
+  <script src="catalog-data.js"></script>
+  <script>
+  (function () {
+    const C = (typeof CATALOG !== 'undefined') ? CATALOG : (window.CATALOG || null);
+    if (!C) { document.body.innerHTML = '<p style="padding:40px">未找到 catalog-data.js，请确认该文件与本页面在同一目录。</p>'; return; }
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const imgUrl = n => (!n ? '' : (n.indexOf('data:') === 0 ? n : 'assets/photos/' + n));
+    function primaryPhoto(p){
+      if(p.colors && p.colors.length){
+        const c = p.colors[0];
+        if(c && c.photos && c.photos.length) return c.photos[0];
+        if(c && c.photo) return c.photo;
+      }
+      if(p.photos && p.photos.length) return p.photos[0];
+      return p.photo || '';
+    }
+
+    // ---- Cover ----
+    const b = C.brand || {};
+    document.getElementById('cover').innerHTML = `
+      <div class="kicker">${esc(b.name || 'Brand')}</div>
+      <div class="tap">🍺</div>
+      <h1>${esc(C.title && C.title.zh || 'BEER TOWER CATALOG')}</h1>
+      <div class="sub">${esc(C.title && C.title.en || 'Tap Tower 产品目录')}</div>
+      <div class="meta">
+        ${b.contact ? `<div><b>Contact</b>${esc(b.contact)}</div>` : ''}
+        ${b.tel ? `<div><b>Tel</b>${esc(b.tel)}</div>` : ''}
+        ${b.fax ? `<div><b>Fax</b>${esc(b.fax)}</div>` : ''}
+        ${b.mob ? `<div><b>Mob</b>${esc(b.mob)}</div>` : ''}
+        ${b.web ? `<div><b>Web</b>${esc(b.web)}</div>` : ''}
+        ${b.email ? `<div><b>Email</b>${esc(b.email)}</div>` : ''}
+      </div>
+      <div class="foot">${esc(b.name || '')} · ${esc(C.year || '')} PRODUCT CATALOG</div>`;
+
+    // ---- Intro ----
+    const products = C.products || [];
+    document.getElementById('intro').innerHTML = (C.intro || '').replace(/\{n\}/g, products.length);
+
+    // ---- Product cards ----
+    const grid = document.getElementById('grid');
+    products.forEach((p, i) => {
+      const specs = [];
+      if (p.capacity) specs.push(['容量 Capacity', p.capacity]);
+      if (p.material) specs.push(['材质 Material', p.material]);
+      if (p.desc)     specs.push(['规格 Size', p.desc]);
+      if (p.packing)  specs.push(['包装 Packing', p.packing]);
+      if (p.meas)     specs.push(['外箱 MEAS', p.meas]);
+      if (p.weight)   specs.push(['毛/净重 N.W/G.W', p.weight]);
+      if (p.load)     specs.push(['装柜 Load', p.load]);
+      const specHtml = specs.map(([k, v]) =>
+        `<div class="spec"><span class="sk">${esc(k)}</span><span class="sv">${esc(v)}</span></div>`).join('');
+
+      const tiers = (p.prices || []).filter(t => t && (t.price || t.moq));
+      let priceHtml;
+      if (tiers.length) {
+        priceHtml = tiers.map(t =>
+          `<div class="tier"><span class="t-price">¥${esc(t.price)}</span><span class="t-moq">${esc(t.moq) || '—'}</span></div>`).join('');
+      } else {
+        priceHtml = `<div class="tier"><span class="t-price muted">面议 / Quote</span></div>`;
+      }
+
+      const pp = primaryPhoto(p);
+      const photo = pp
+        ? `<div class="card-photo"><img loading="lazy" src="${imgUrl(pp)}" alt="${esc(p.item)}"></div>`
+        : `<div class="card-photo ph"><div class="ph-icon">🍺</div></div>`;
+      const swatches = (p.colors && p.colors.length)
+        ? `<div class="swatches">${p.colors.map(c =>
+            `<span class="swatch" style="background:${esc(c.hex || '#ccc')}" title="${esc(c.name || '颜色')}"></span>${c.name ? `<span class="sw-label">${esc(c.name)}</span>` : ''}`
+          ).join('')}</div>`
+        : '';
+
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-head"><span class="idx">#${String(i + 1).padStart(2, '0')}</span>
+          <span class="item">${esc(p.item)}</span></div>
+        ${photo}
+        ${swatches}
+        <div class="card-body">
+          <div class="specs">${specHtml}</div>
+          <div class="price-block">
+            <div class="pb-title">${esc(C.priceLabel || '出厂价 (不含税) / Ex-works')}</div>
+            <div class="tiers">${priceHtml}</div>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    });
+
+    // ---- Gallery ----
+    const galleryFiles = C.gallery && C.gallery.length ? C.gallery : [];
+    document.getElementById('galleryLead').textContent =
+      (C.galleryLead || '产品实拍展示（点击查看大图）。共 {n} 张。').replace('{n}', galleryFiles.length);
+    const gallery = document.getElementById('gallery');
+    galleryFiles.forEach(fn => {
+      const a = document.createElement('a');
+      a.className = 'g-item';
+      a.href = 'assets/photos/' + fn;
+      a.target = '_blank';
+      a.innerHTML = `<img loading="lazy" src="assets/thumbs/${esc(fn)}" alt="${esc(fn)}">`;
+      gallery.appendChild(a);
+    });
+
+    // ---- Footer ----
+    document.getElementById('footer').innerHTML = `
+      <div><b>${esc(b.name || '')}</b>${b.cn ? ' · ' + esc(b.cn) : ''}</div>
+      <div style="margin-top:8px;">${[b.tel, b.fax, b.mob].filter(Boolean).map(esc).join(' &nbsp;|&nbsp; ')}</div>
+      <div style="margin-top:8px;">${[b.web, b.email].filter(Boolean).map(esc).join(' &nbsp;|&nbsp; ')}</div>`;
+
+    // ---- Lightbox ----
+    document.querySelectorAll('.g-item').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out';
+        const img = document.createElement('img');
+        img.src = a.getAttribute('href');
+        img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+        ov.appendChild(img);
+        ov.addEventListener('click', () => ov.remove());
+        document.body.appendChild(ov);
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
