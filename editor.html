@@ -355,6 +355,16 @@
     // 与新数据（p.specs 数组 [{label,value}]）。旧数据在编辑/增删时自动迁移为 specs。
     const SPEC_MAP=[['容量','capacity'],['材质','material'],['规格','desc'],['包装','packing'],['外箱','meas'],['毛/净重','weight'],['装柜','load']];
     const SPEC_EN={'容量':'Capacity','材质':'Material','规格':'Size','包装':'Packing','外箱':'MEAS','毛/净重':'N.W/G.W','装柜':'Load'};
+    // 新建产品时使用的完备属性模板：7 项规格全部预建好（标签中英齐备，值留空待填）
+    function defaultProduct(){
+      return {
+        item:'NEW',
+        desc:'', capacity:'', material:'', packing:'', meas:'', weight:'', load:'',
+        specs: SPEC_MAP.map(([label])=>({label, value:'', label_en:SPEC_EN[label]||'', value_en:''})),
+        prices:[{price:'',moq:''}],
+        photo:'', photos:[], colors:[]
+      };
+    }
     // 结构化输出 {label,value,label_en,value_en}，与展示页 index.html 保持一致：
     // - 旧固定字段：标签用 SPEC_EN 映射英文，值用对应 key+'_en' 字段（无则回退中文）
     // - 新 specs 数组：直接取 s.label_en / s.value_en
@@ -596,7 +606,7 @@
           e.preventDefault(); e.stopPropagation();
           const a=btn.dataset.action;
           if(a==='add-product'){
-            C.products.push({item:'NEW',desc:'',capacity:'',material:'',packing:'',meas:'',weight:'',load:'',prices:[{price:'',moq:''}],photo:''});
+            C.products.push(defaultProduct());
             render(); toast(t('toast_add_product'));
           } else if(a==='del-product'){
             C.products.splice(+btn.dataset.i,1); render(); toast(t('toast_del_product'));
