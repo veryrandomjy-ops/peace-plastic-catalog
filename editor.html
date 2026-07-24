@@ -703,18 +703,50 @@
       });
     }
 
-    // lightbox (preview mode)
+    // lightbox (preview mode)：产品图与图廊均可点击放大，多视角支持切换
+    function openLightbox(srcs, idx){
+      if(!srcs || !srcs.length) return;
+      const ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out';
+      const img=document.createElement('img');
+      img.style.cssText='max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+      ov.appendChild(img);
+      let i=idx||0;
+      const show=()=>{ img.src=srcs[i]; };
+      let prev,next,count;
+      if(srcs.length>1){
+        const mk=(t,pos)=>{ const d=document.createElement('div'); d.textContent=t; d.style.cssText='position:absolute;'+pos+';top:50%;transform:translateY(-50%);color:#fff;font-size:54px;line-height:1;cursor:pointer;user-select:none;opacity:.75;padding:0 16px;'; return d; };
+        prev=mk('‹','left:6px'); next=mk('›','right:6px');
+        count=document.createElement('div'); count.style.cssText='position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:#fff;font-size:14px;background:rgba(0,0,0,.45);padding:4px 12px;border-radius:20px;';
+        ov.appendChild(prev); ov.appendChild(next); ov.appendChild(count);
+      }
+      const update=()=>{ show(); if(count) count.textContent=(i+1)+' / '+srcs.length; };
+      const close=()=>{ ov.remove(); document.removeEventListener('keydown',onKey); };
+      const onKey=e=>{ if(e.key==='Escape') close(); else if(e.key==='ArrowLeft'){ i=(i-1+srcs.length)%srcs.length; update(); } else if(e.key==='ArrowRight'){ i=(i+1)%srcs.length; update(); } };
+      if(prev) prev.addEventListener('click',e=>{ e.stopPropagation(); i=(i-1+srcs.length)%srcs.length; update(); });
+      if(next) next.addEventListener('click',e=>{ e.stopPropagation(); i=(i+1)%srcs.length; update(); });
+      ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+      document.addEventListener('keydown',onKey);
+      update(); document.body.appendChild(ov);
+    }
     function bindLightbox(){
       if(state.edit) return;
+      // 图廊：单图放大
       canvas.querySelectorAll('.g-item').forEach(a=>{
-        a.addEventListener('click',e=>{
-          e.preventDefault();
-          const ov=document.createElement('div');
-          ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out';
-          const img=document.createElement('img'); img.src=a.getAttribute('href');
-          img.style.cssText='max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
-          ov.appendChild(img); ov.addEventListener('click',()=>ov.remove());
-          document.body.appendChild(ov);
+        a.addEventListener('click',e=>{ e.preventDefault(); openLightbox([a.getAttribute('href')], 0); });
+      });
+      // 产品卡片：放大当前视角，多视角支持左右切换
+      canvas.querySelectorAll('.card-photo').forEach(ph=>{
+        ph.addEventListener('click',e=>{
+          if(e.target.closest('[data-action]')) return; // 轮播控制按钮等自行处理
+          const track=ph.querySelector('.car-track');
+          let srcs;
+          if(track) srcs=[...track.querySelectorAll('.car-slide img')].map(im=>im.getAttribute('src')).filter(Boolean);
+          else { const im=ph.querySelector('img'); srcs=im?[im.getAttribute('src')]:[]; }
+          if(!srcs.length) return; // 占位图（无图）不放大
+          const car=ph.querySelector('.carousel');
+          const idx=car?Math.min((+car.dataset.ai)||0, srcs.length-1):0;
+          openLightbox(srcs, idx);
         });
       });
     }
