@@ -302,14 +302,53 @@
       if(p.colors && p.colors.some(c => c.photo || (c.photos && c.photos.length))) return true;
       return false;
     }
-    function applyMatch(i, files){
+    // 按型号后的英文字母分组（如 HP245G1→G、HP245YK1→YK），每个字母=一个颜色分组
+    function extractGroupKey(item, file){
+      const ik = normKey(item), fk = normKey(file);
+      let rem = fk;
+      if(ik && fk.indexOf(ik) === 0) rem = fk.slice(ik.length);
+      const m = rem.match(/^([a-z]+)/);
+      return m ? m[1].toUpperCase() : '';
+    }
+    const GROUP_PALETTE = { G:'#2e8b57', K:'#2b2b2b', P:'#7d3c98', R:'#c0392b', Y:'#e8b423', C:'#2980b9', B:'#34495e', S:'#bdc3c7', W:'#ecf0f1', A:'#d68910', D:'#16a085', YK:'#8e44ad' };
+    function classifyColors(files, item){
+      const groups = {};
+      files.forEach(f=>{
+        const key = extractGroupKey(item, f) || 'DEFAULT';
+        (groups[key] = groups[key] || []).push(f);
+      });
+      return Object.keys(groups).sort().map(key=>{
+        const arr = groups[key];
+        return {
+          name: key === 'DEFAULT' ? '默认款' : key,   // 字母作为初始名，用户手动改成真实颜色
+          name_en: '',
+          hex: GROUP_PALETTE[key] || '#cccccc',
+          photo: arr[0],
+          photos: arr.slice()
+        };
+      });
+    }
+    // 把匹配到的图片按颜色字母分组写入商品；返回 {ok, ...}
+    function doClassify(i, files){
       const pr = C.products[i];
-      if(!pr || !files || !files.length){ toast(t('toast_no_match')+(pr?(' → '+pr.item):'')); return; }
+      if(!pr || !files || !files.length) return {ok:false, reason:'no_match'};
+      if(pr.colors && pr.colors.some(c => (c.photos && c.photos.length) || c.photo)) return {ok:false, reason:'already'};
+      const colors = classifyColors(files, pr.item);
+      if(!colors.length) return {ok:false, reason:'no_match'};
+      pr.colors = colors;
       pr.photo = files[0];
       pr.photos = files.slice();
-      if(pr.colors && pr.colors.length){ pr.colors[0].photos = files.slice(); pr.colors[0].photo = files[0]; }
+      return {ok:true, n:colors.length, files:files.length, item:pr.item};
+    }
+    function applyMatch(i, files){
+      const r = doClassify(i, files);
+      if(!r.ok){
+        if(r.reason === 'no_match') toast(t('toast_no_match') + (C.products[i] ? (' → ' + C.products[i].item) : ''));
+        else toast('该商品已按颜色分组，跳过 → ' + (C.products[i] ? C.products[i].item : ''));
+        return;
+      }
       render();
-      toast(t('toast_matched_one').replace('{n}', files.length)+' → '+pr.item);
+      toast(t('toast_matched_one').replace('{n}', r.files) + ' → ' + r.item + '（' + r.n + ' 个颜色）');
     }
 
     // 规格属性：兼容旧数据（capacity/material/desc/packing/meas/weight/load 固定字段）
@@ -596,11 +635,11 @@
           } else if(a==='match-photos'){
             const i=+btn.dataset.i; applyMatch(i, matchPhotos(C.products[i].item));
           } else if(a==='match-all'){
-            let n=0;
+            let n=0, c=0;
             C.products.forEach((pr,idx)=>{
-              if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ pr.photo=f[0]; pr.photos=f.slice(); if(pr.colors&&pr.colors.length){ pr.colors[0].photos=f.slice(); pr.colors[0].photo=f[0]; } n++; } }
+              if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ const r=doClassify(idx,f); if(r.ok){ n++; c+=r.n; } } }
             });
-            render(); toast(n? t('toast_match').replace('{n}', n) : t('toast_match_none'));
+            render(); toast(n? ('已为 '+n+' 款商品自动按颜色分 '+c+' 组') : t('toast_match_none'));
           }
         });
       });
@@ -830,9 +869,9 @@
     document.getElementById('btnPrint').addEventListener('click',()=>window.print());
     document.getElementById('btnExport').addEventListener('click',exportData);
     document.getElementById('btnMatchAll').addEventListener('click',()=>{
-      let n=0;
-      C.products.forEach((pr,idx)=>{ if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ pr.photo=f[0]; pr.photos=f.slice(); if(pr.colors&&pr.colors.length){ pr.colors[0].photos=f.slice(); pr.colors[0].photo=f[0]; } n++; } } });
-      render(); toast(n? ('已为 '+n+' 款产品自动匹配图片') : '没有可匹配的产品（或都已配图）');
+      let n=0, c=0;
+      C.products.forEach((pr,idx)=>{ if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ const r=doClassify(idx,f); if(r.ok){ n++; c+=r.n; } } } });
+      render(); toast(n? ('已为 '+n+' 款商品自动按颜色分 '+c+' 组') : '没有可匹配的产品（或都已配图）');
     });
 
     const PREFS='bt_cat_prefs_v1';
