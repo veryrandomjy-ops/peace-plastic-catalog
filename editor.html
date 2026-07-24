@@ -75,6 +75,8 @@
   .card-head{display:flex;align-items:center;gap:9px;padding:12px 14px 9px;background:linear-gradient(90deg,#fff7e8,#fff);border-bottom:1px solid var(--line);}
   .card-head .idx{font-size:11px;color:#fff;background:var(--amber);border-radius:18px;padding:3px 9px;font-weight:700;}
   .card-head .item{font-size:18px;font-weight:800;color:var(--dark);}
+  .match-btn{margin-left:4px;border:1px solid var(--amber);background:#fff;color:var(--amber-d);border-radius:8px;padding:1px 7px;font-size:13px;cursor:pointer;line-height:1.4;}
+  .match-btn:hover{background:var(--amber);color:#fff;}
   .card-photo{background:#f1ece0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--line);position:relative;aspect-ratio:1/1;}
   .card-photo img{width:100%;height:100%;object-fit:contain;display:block;}
   .card-photo.ph{aspect-ratio:1/1;}
@@ -112,8 +114,12 @@
   .specs{display:flex;flex-direction:column;gap:5px;}
   .spec{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px dashed #efe6d3;padding-bottom:4px;}
   .spec .sk{color:var(--muted);white-space:nowrap;}
-  .spec .sv{color:var(--ink);text-align:right;font-weight:600;}
-  .price-block{margin-top:auto;background:#fff8ec;border:1px solid #f0e2c4;border-radius:11px;padding:9px 11px;}
+  .spec .sv{color:var(--ink);text-align:right;font-weight:600;flex:1;}
+  .spec .x{cursor:pointer;color:#c0392b;font-weight:700;padding:0 4px;display:none;}
+  .add-spec{margin-top:6px;border:1px dashed var(--amber);background:#fff8ec;color:var(--amber-d);border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;display:none;}
+  .editing .spec .x{display:inline;}
+  .editing .add-spec{display:inline-block;}
+  .price-block{position:relative;margin-top:auto;background:#fff8ec;border:1px solid #f0e2c4;border-radius:11px;padding:9px 11px;}
   .pb-title{font-size:11px;color:var(--amber-d);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-weight:700;}
   .tiers{display:flex;flex-wrap:wrap;gap:7px;}
   .tier{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #ecd9af;border-radius:9px;padding:4px 9px;}
@@ -121,6 +127,8 @@
   .tier .t-moq{font-size:11px;color:var(--muted);}
   .tier .x{cursor:pointer;color:#c0392b;font-weight:700;padding:0 2px;}
   .add-tier{font-size:11px;color:var(--amber-d);border:1px dashed var(--amber);background:#fff;border-radius:8px;padding:3px 8px;}
+  .add-price-block{font-size:11px;color:var(--amber-d);border:1px dashed var(--amber);background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;}
+  .pb-del{position:absolute;top:6px;right:8px;cursor:pointer;color:#c0392b;font-weight:700;font-size:14px;line-height:1;padding:2px 4px;}
 
   /* ---------- 图廊 ---------- */
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
@@ -189,8 +197,8 @@
     .toolbar{display:none!important;}
     .viewport{padding:0;}
     #canvas{box-shadow:none;border-radius:0;max-width:100%;zoom:1!important;transform:none!important;}
-    .drag-handle,.card-del,.g-del,.add-prod,.add-tier,.add-img,.up-hint,.car-nav,.car-bar,.car-add,.car-rm,.car-up,.car-hint-swipe,
-      .ph-file,.sw-color,.swatch-x,.add-color,.tier .x,.ed-hint{display:none!important;}
+    .drag-handle,.card-del,.g-del,.add-prod,.add-tier,.add-price-block,.add-img,.up-hint,.car-nav,.car-bar,.car-add,.car-rm,.car-up,.car-hint-swipe,
+      .ph-file,.sw-color,.swatch-x,.add-color,.tier .x,.ed-hint,.spec .x,.add-spec,.pb-del,.match-btn,#btnMatchAll{display:none!important;}
     .editing [contenteditable]{outline:none!important;}
     .editing [contenteditable]:empty:before{content:""!important;}  /* 隐藏空字段占位提示词（未填/留空/型号等） */
     .cover{min-height:100vh;page-break-after:always;}
@@ -221,6 +229,7 @@
     <div class="tb-group"><label>主题色</label><input type="color" id="accent" value="#E8A33D"></div>
     <div class="tb-group"><label><input type="checkbox" id="showCover" checked> 封面</label></div>
     <div class="tb-sep"></div>
+    <button class="btn" id="btnMatchAll">🔍 一键匹配全部图片</button>
     <button class="btn" id="btnExport">⬇ 导出数据</button>
     <button class="btn primary" id="btnPrint">🖨 打印 / PDF</button>
   </div>
@@ -271,6 +280,48 @@
       return [];
     }
 
+    // ---- 自动匹配图片：按产品型号名从图库清单匹配文件名 ----
+    function photoList(){ return (C.photoList && C.photoList.length) ? C.photoList : (C.gallery || []); }
+    function normKey(s){ return (s||'').toLowerCase().replace(/\.[a-z0-9]+$/,'')
+      .replace(/[^a-z0-9]/g,''); }
+    function matchPhotos(item){
+      const k = normKey(item);
+      if(k.length < 2) return [];
+      return photoList().filter(f => normKey(f).indexOf(k) >= 0)
+        .sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+    }
+    function hasPhotos(p){
+      if(p.photo) return true;
+      if(p.photos && p.photos.length) return true;
+      if(p.colors && p.colors.some(c => c.photo || (c.photos && c.photos.length))) return true;
+      return false;
+    }
+    function applyMatch(i, files){
+      const pr = C.products[i];
+      if(!pr || !files || !files.length){ toast('未找到匹配图片：'+(pr?pr.item:'')); return; }
+      pr.photo = files[0];
+      pr.photos = files.slice();
+      if(pr.colors && pr.colors.length){ pr.colors[0].photos = files.slice(); pr.colors[0].photo = files[0]; }
+      render();
+      toast('已匹配 '+files.length+' 张图 → '+pr.item);
+    }
+
+    // 规格属性：兼容旧数据（capacity/material/desc/packing/meas/weight/load 固定字段）
+    // 与新数据（p.specs 数组 [{label,value}]）。旧数据在编辑/增删时自动迁移为 specs。
+    const SPEC_MAP=[['容量','capacity'],['材质','material'],['规格','desc'],['包装','packing'],['外箱','meas'],['毛/净重','weight'],['装柜','load']];
+    function normSpecs(p){
+      if(Array.isArray(p.specs)) return p.specs;
+      return SPEC_MAP.filter(([_,k])=> p[k]!=null && p[k]!=='').map(([label,k])=>({label, value:String(p[k])}));
+    }
+    function ensureSpecs(p){
+      if(!Array.isArray(p.specs)){
+        p.specs = normSpecs(p);
+        // 迁移后清理旧固定字段，避免导出数据里重复/歧义
+        SPEC_MAP.forEach(([_,k])=>{ if(k!=='photo') delete p[k]; });
+      }
+      return p.specs;
+    }
+
     function render(){
       canvas.innerHTML =
         (state.showCover ? renderCover() : '') +
@@ -317,15 +368,13 @@
       </div></section>`;
     }
     function renderCard(p,i){
-      const specs=[];
-      if(p.capacity) specs.push(['容量',p.capacity,'capacity']);
-      if(p.material) specs.push(['材质',p.material,'material']);
-      if(p.desc)     specs.push(['规格',p.desc,'desc']);
-      if(p.packing)  specs.push(['包装',p.packing,'packing']);
-      if(p.meas)     specs.push(['外箱',p.meas,'meas']);
-      if(p.weight)   specs.push(['毛/净重',p.weight,'weight']);
-      if(p.load)     specs.push(['装柜',p.load,'load']);
-      const specHtml=specs.map(([k,v,key])=>`<div class="spec"><span class="sk">${k}</span><span class="sv" ${ed('products.'+i+'.'+key)} ${ph('未填')}>${esc(v)}</span></div>`).join('');
+      if(state.edit && !Array.isArray(p.specs)) ensureSpecs(p);
+      const specsArr = (Array.isArray(p.specs)?p.specs:normSpecs(p));
+      const specHtml=specsArr.map((s,j)=>`<div class="spec">
+        <span class="sk" ${ed('products.'+i+'.specs.'+j+'.label')} ${ph('属性名')}>${esc(s.label)}</span>
+        <span class="sv" ${ed('products.'+i+'.specs.'+j+'.value')} ${ph('未填')}>${esc(s.value)}</span>
+        ${state.edit?`<span class="x" data-action="del-spec" data-i="${i}" data-j="${j}" title="删除该属性">×</span>`:''}
+      </div>`).join('');
 
       const tiers=(p.prices||[]).map((t,ti)=>`
         <div class="tier">
@@ -370,15 +419,18 @@
         <button class="drag-handle" title="拖拽排序">⠿</button>
         <button class="card-del" data-action="del-product" data-i="${i}" title="删除">×</button>
         <div class="card-head"><span class="idx">#${String(i+1).padStart(2,'0')}</span>
-          <span class="item" ${ed('products.'+i+'.item')} ${ph('型号')}>${esc(p.item)}</span></div>
+          <span class="item" ${ed('products.'+i+'.item')} ${ph('型号')}>${esc(p.item)}</span>
+          ${state.edit?`<button class="match-btn" data-action="match-photos" data-i="${i}" title="按型号自动匹配图库图片">🔍</button>`:''}</div>
         ${photo}
         ${swatches}
         <div class="card-body">
-          <div class="specs">${specHtml}</div>
-          <div class="price-block">
-            <div class="pb-title">${esc(C.priceLabel||'出厂价 (不含税) / Ex-works')}</div>
-            ${tiersBlock}
-          </div>
+          <div class="specs">${specHtml}${state.edit?`<button class="add-spec" data-action="add-spec" data-i="${i}">＋ 添加属性</button>`:''}</div>
+        <div class="price-block">
+          <div class="pb-title">${esc(C.priceLabel||'出厂价 (不含税) / Ex-works')}${state.edit&&!p.priceHidden?`<span class="pb-del" data-action="del-price-block" data-i="${i}" title="删除整栏价格">×</span>`:''}</div>
+          ${p.priceHidden
+            ? (state.edit?`<button class="add-price-block" data-action="add-price-block" data-i="${i}">＋ 添加价格栏</button>`:`<div class="tier"><span class="t-moq">面议 / Quote</span></div>`)
+            : tiersBlock}
+        </div>
           ${state.edit?`<div class="ph-file" style="font-size:11px;color:var(--muted)">配图文件名: <span ${ed('products.'+i+'.photo')} ${ph('留空')}>${esc(p.photo)||'（无）'}</span></div>`:''}
         </div>
       </article>`;
@@ -478,6 +530,16 @@
             const i=+btn.dataset.i; C.products[i].prices.push({price:'',moq:''}); render();
           } else if(a==='del-tier'){
             const i=+btn.dataset.i, ti=+btn.dataset.ti; C.products[i].prices.splice(ti,1); render();
+          } else if(a==='del-price-block'){
+            const i=+btn.dataset.i; C.products[i].priceHidden=true; render(); toast('已删除整栏价格，可点“＋ 添加价格栏”恢复');
+          } else if(a==='add-price-block'){
+            const i=+btn.dataset.i; C.products[i].priceHidden=false;
+            if(!C.products[i].prices||!C.products[i].prices.length) C.products[i].prices=[{price:'',moq:''}];
+            render(); toast('已添加价格栏');
+          } else if(a==='add-spec'){
+            const i=+btn.dataset.i; ensureSpecs(C.products[i]); C.products[i].specs.push({label:'新属性',value:''}); render(); toast('已添加属性，点左侧文字改名、右侧填值');
+          } else if(a==='del-spec'){
+            const i=+btn.dataset.i, j=+btn.dataset.j; ensureSpecs(C.products[i]); C.products[i].specs.splice(j,1); render(); toast('已删除该属性');
           } else if(a==='del-img'){
             const src=btn.dataset.src; const k=C.gallery.indexOf(src); if(k>=0) C.gallery.splice(k,1); render();
           } else if(a==='add-color'){
@@ -496,6 +558,14 @@
             const ai=selAngle[i]??0;
             if(arr.length>1){ arr.splice(ai,1); selAngle[i]=Math.max(0,ai-1); render(); toast('已删除当前视角'); }
             else { render(); toast('至少保留 1 张视角（可点击图片替换）'); }
+          } else if(a==='match-photos'){
+            const i=+btn.dataset.i; applyMatch(i, matchPhotos(C.products[i].item));
+          } else if(a==='match-all'){
+            let n=0;
+            C.products.forEach((pr,idx)=>{
+              if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ pr.photo=f[0]; pr.photos=f.slice(); if(pr.colors&&pr.colors.length){ pr.colors[0].photos=f.slice(); pr.colors[0].photo=f[0]; } n++; } }
+            });
+            render(); toast(n? ('已为 '+n+' 款产品自动匹配图片') : '没有可匹配的产品（或都已配图）');
           }
         });
       });
@@ -684,6 +754,11 @@
     });
     document.getElementById('btnPrint').addEventListener('click',()=>window.print());
     document.getElementById('btnExport').addEventListener('click',exportData);
+    document.getElementById('btnMatchAll').addEventListener('click',()=>{
+      let n=0;
+      C.products.forEach((pr,idx)=>{ if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ pr.photo=f[0]; pr.photos=f.slice(); if(pr.colors&&pr.colors.length){ pr.colors[0].photos=f.slice(); pr.colors[0].photo=f[0]; } n++; } } });
+      render(); toast(n? ('已为 '+n+' 款产品自动匹配图片') : '没有可匹配的产品（或都已配图）');
+    });
 
     const PREFS='bt_cat_prefs_v1';
     function savePrefs(){ try{ localStorage.setItem(PREFS, JSON.stringify({zoom:state.zoom,cols:state.cols,imgRatio:state.imgRatio,showCover:state.showCover,accent:document.getElementById('accent').value})); }catch(e){} }
@@ -715,6 +790,14 @@
     function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
       clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
 
+    // 输入型号后失焦，自动按名匹配图库图片（仅当该产品尚无图，避免覆盖手动上传的图）
+    canvas.addEventListener('focusout', e=>{
+      const t=e.target;
+      if(t && t.classList && t.classList.contains('item') && state.edit){
+        const m=(t.getAttribute('data-path')||'').match(/products\.(\d+)\.item$/);
+        if(m){ const i=+m[1]; const pr=C.products[i]; if(pr && !hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length) applyMatch(i, f); } }
+      }
+    });
     // init
     loadPrefs(); applyZoom(); applyCols(); applyAccent(document.getElementById('accent').value); applyMode(); applyRatio(); render();
   })();
