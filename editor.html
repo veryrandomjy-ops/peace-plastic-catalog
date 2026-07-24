@@ -315,15 +315,21 @@
     // 规格属性：兼容旧数据（capacity/material/desc/packing/meas/weight/load 固定字段）
     // 与新数据（p.specs 数组 [{label,value}]）。旧数据在编辑/增删时自动迁移为 specs。
     const SPEC_MAP=[['容量','capacity'],['材质','material'],['规格','desc'],['包装','packing'],['外箱','meas'],['毛/净重','weight'],['装柜','load']];
+    const SPEC_EN={'容量':'Capacity','材质':'Material','规格':'Size','包装':'Packing','外箱':'MEAS','毛/净重':'N.W/G.W','装柜':'Load'};
+    // 结构化输出 {label,value,label_en,value_en}，与展示页 index.html 保持一致：
+    // - 旧固定字段：标签用 SPEC_EN 映射英文，值用对应 key+'_en' 字段（无则回退中文）
+    // - 新 specs 数组：直接取 s.label_en / s.value_en
     function normSpecs(p){
-      if(Array.isArray(p.specs)) return p.specs;
-      return SPEC_MAP.filter(([_,k])=> p[k]!=null && p[k]!=='').map(([label,k])=>({label, value:String(p[k])}));
+      if(Array.isArray(p.specs)){
+        return p.specs.map(s=>({label:s.label, value:String(s.value!=null?s.value:''), label_en:s.label_en||'', value_en:s.value_en||''}));
+      }
+      return SPEC_MAP.filter(([_,k])=> p[k]!=null && p[k]!=='').map(([label,k])=>({label, value:String(p[k]), label_en:SPEC_EN[label]||'', value_en:p[k+'_en']||''}));
     }
     function ensureSpecs(p){
       if(!Array.isArray(p.specs)){
         p.specs = normSpecs(p);
-        // 迁移后清理旧固定字段，避免导出数据里重复/歧义
-        SPEC_MAP.forEach(([_,k])=>{ if(k!=='photo') delete p[k]; });
+        // 迁移后清理旧固定字段与对应 _en 翻译，避免导出数据里重复/歧义
+        SPEC_MAP.forEach(([_,k])=>{ if(k!=='photo'){ delete p[k]; delete p[k+'_en']; } });
       }
       return p.specs;
     }
