@@ -205,6 +205,10 @@
     .card,.g-item{break-inside:avoid;}
     section{padding:24px 0;}
   }
+  /* 编辑器内语言切换：行内化，不脱离工具栏 */
+  .toolbar .lang-bar{position:static;background:transparent;box-shadow:none;padding:0;margin-left:auto;}
+  .toolbar .lang-bar button{color:var(--muted);}
+  .toolbar .lang-bar button.on{background:var(--amber);color:#fff;}
 </style>
 </head>
 <body>
@@ -232,6 +236,7 @@
     <button class="btn" id="btnMatchAll">🔍 一键匹配全部图片</button>
     <button class="btn" id="btnExport">⬇ 导出数据</button>
     <button class="btn primary" id="btnPrint">🖨 打印 / PDF</button>
+    <div class="lang-bar" id="langBar"></div>
   </div>
 
   <div class="viewport">
@@ -241,6 +246,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="catalog-data.js"></script>
+  <script src="i18n.js"></script>
   <script>
   (function(){
     // 防御性读取：兼容 `const CATALOG`（全局词法）与 `window.CATALOG=` 两种声明
@@ -298,12 +304,12 @@
     }
     function applyMatch(i, files){
       const pr = C.products[i];
-      if(!pr || !files || !files.length){ toast('未找到匹配图片：'+(pr?pr.item:'')); return; }
+      if(!pr || !files || !files.length){ toast(t('toast_no_match')+(pr?(' → '+pr.item):'')); return; }
       pr.photo = files[0];
       pr.photos = files.slice();
       if(pr.colors && pr.colors.length){ pr.colors[0].photos = files.slice(); pr.colors[0].photo = files[0]; }
       render();
-      toast('已匹配 '+files.length+' 张图 → '+pr.item);
+      toast(t('toast_matched_one').replace('{n}', files.length)+' → '+pr.item);
     }
 
     // 规格属性：兼容旧数据（capacity/material/desc/packing/meas/weight/load 固定字段）
@@ -330,6 +336,7 @@
         renderFooter();
       bindInline();
       applyAutoRatios();
+      applyEditorLang();
     }
 
     function renderCover(){
@@ -358,9 +365,10 @@
     function renderProductsSection(){
       const ps=C.products||[];
       const cards=ps.map((p,i)=>renderCard(p,i)).join('');
-      const lead=(C.intro||'').replace(/\{n\}/g,ps.length);
+      let lead= state.edit ? (C.intro||'') : L(C.intro||'', C.intro_en||'');
+      lead = (lead||'').replace(/\{n\}/g, ps.length);
       return `<section><div class="wrap">
-        <div class="sec-title"><h2 ${ed('title')}>产品目录</h2><span class="en">Product Catalog</span></div>
+        <div class="sec-title"><h2 ${ed('title')}>${state.edit?'产品目录':t('products')}</h2><span class="en">Product Catalog</span></div>
         <div class="sec-line"></div>
         <p class="lead" ${ed('intro')}>${lead}</p>
         <div class="grid" id="grid">${cards}</div>
@@ -371,8 +379,8 @@
       if(state.edit && !Array.isArray(p.specs)) ensureSpecs(p);
       const specsArr = (Array.isArray(p.specs)?p.specs:normSpecs(p));
       const specHtml=specsArr.map((s,j)=>`<div class="spec">
-        <span class="sk" ${ed('products.'+i+'.specs.'+j+'.label')} ${ph('属性名')}>${esc(s.label)}</span>
-        <span class="sv" ${ed('products.'+i+'.specs.'+j+'.value')} ${ph('未填')}>${esc(s.value)}</span>
+        <span class="sk" ${ed('products.'+i+'.specs.'+j+'.label')} ${ph('属性名')}>${esc(state.edit?s.label:L(s.label, s.label_en))}</span>
+        <span class="sv" ${ed('products.'+i+'.specs.'+j+'.value')} ${ph('未填')}>${esc(state.edit?s.value:L(s.value, s.value_en))}</span>
         ${state.edit?`<span class="x" data-action="del-spec" data-i="${i}" data-j="${j}" title="删除该属性">×</span>`:''}
       </div>`).join('');
 
@@ -384,7 +392,7 @@
         </div>`).join('');
       const tiersBlock = state.edit
         ? `<div class="tiers">${tiers}<button class="add-tier" data-action="add-tier" data-i="${i}">＋ 加价</button></div>`
-        : `<div class="tiers">${tiers||'<span class="t-moq">面议 / Quote</span>'}</div>`;
+        : `<div class="tiers">${tiers||'<span class="t-moq">'+esc(t('quote'))+'</span>'}</div>`;
 
       // 配图：当前选色下的多视角轮播；编辑态点图替换当前视角、＋加图、×删图
       const photos = getPhotos(p, i);
@@ -426,9 +434,9 @@
         <div class="card-body">
           <div class="specs">${specHtml}${state.edit?`<button class="add-spec" data-action="add-spec" data-i="${i}">＋ 添加属性</button>`:''}</div>
         <div class="price-block">
-          <div class="pb-title">${esc(C.priceLabel||'出厂价 (不含税) / Ex-works')}${state.edit&&!p.priceHidden?`<span class="pb-del" data-action="del-price-block" data-i="${i}" title="删除整栏价格">×</span>`:''}</div>
+          <div class="pb-title">${esc(state.edit?(C.priceLabel||'出厂价 (不含税) / Ex-works'):L(C.priceLabel||'出厂价 (不含税)', C.priceLabel_en||'Ex-works Price (excl. tax)'))}${state.edit&&!p.priceHidden?`<span class="pb-del" data-action="del-price-block" data-i="${i}" title="删除整栏价格">×</span>`:''}</div>
           ${p.priceHidden
-            ? (state.edit?`<button class="add-price-block" data-action="add-price-block" data-i="${i}">＋ 添加价格栏</button>`:`<div class="tier"><span class="t-moq">面议 / Quote</span></div>`)
+            ? (state.edit?`<button class="add-price-block" data-action="add-price-block" data-i="${i}">＋ 添加价格栏</button>`:`<div class="tier"><span class="t-moq">${esc(t('quote'))}</span></div>`)
             : tiersBlock}
         </div>
           ${state.edit?`<div class="ph-file" style="font-size:11px;color:var(--muted)">配图文件名: <span ${ed('products.'+i+'.photo')} ${ph('留空')}>${esc(p.photo)||'（无）'}</span></div>`:''}
@@ -445,11 +453,11 @@
         <span class="sw-wrap">
           <span class="sw-dot">
             <button class="swatch ${ci2===ci?'on':''}" data-action="swatch" data-i="${i}" data-ci="${ci2}"
-              style="background:${esc(c.hex||'#ccc')}" title="${esc(c.name||'颜色')}"></button>
+              style="background:${esc(c.hex||'#ccc')}" title="${esc(L(c.name||'颜色', c.name_en||''))}"></button>
             ${state.edit?`<button class="swatch-x" data-action="del-color" data-i="${i}" data-ci="${ci2}" title="删除颜色">×</button>`:''}
           </span>
           ${state.edit?`<input type="color" class="sw-color" data-i="${i}" data-ci="${ci2}" value="${esc(c.hex||'#cccccc')}" title="点击修改该颜色色值">`:''}
-          ${state.edit?`<span class="sw-name" ${ed('products.'+i+'.colors.'+ci2+'.name')} ${ph('颜色名')}>${esc(c.name)}</span>`:''}
+          ${state.edit?`<span class="sw-name" ${ed('products.'+i+'.colors.'+ci2+'.name')} ${ph('颜色名')}>${esc(c.name)}</span>`:`<span class="sw-name">${esc(L(c.name, c.name_en||''))}</span>`}
         </span>`).join('');
       const add = state.edit ? `<button class="add-color" data-action="add-color" data-i="${i}">＋ 加颜色</button>` : '';
       return `<div class="swatches">${items}${add}</div>`;
@@ -466,10 +474,12 @@
         : `<a class="g-item" href="assets/photos/${esc(fn)}" target="_blank">
              <img loading="lazy" src="${imgSrc(fn,'thumb')}" alt="${esc(fn)}">
            </a>`).join('');
+      const glead = state.edit ? '产品实拍展示（点击查看大图）。共 '+g.length+' 张' : L(C.galleryLead||'', C.galleryLead_en||'').replace(/\{n\}/g, g.length);
+      const gleadHtml = state.edit ? (glead + '<span class="ed-hint">，点击图片可替换，右上角 × 可移除，下方可添加新图</span>') : glead;
       return `<section style="background:#fffaf0"><div class="wrap">
-        <div class="sec-title"><h2>实拍图廊</h2><span class="en">Photo Gallery</span></div>
+        <div class="sec-title"><h2>${state.edit?'实拍图廊':t('gallery')}</h2><span class="en">Photo Gallery</span></div>
         <div class="sec-line"></div>
-        <p class="lead">产品实拍展示（点击查看大图）。共 ${g.length} 张${state.edit?'<span class="ed-hint">，点击图片可替换，右上角 × 可移除，下方可添加新图</span>':''}。</p>
+        <p class="lead">${gleadHtml}</p>
         <div class="gallery" id="gallery">${items}</div>
         ${state.edit?`<button class="add-img" data-action="add-img">＋ 添加图片</button>`:''}
       </div></section>`;
@@ -523,9 +533,9 @@
           const a=btn.dataset.action;
           if(a==='add-product'){
             C.products.push({item:'NEW',desc:'',capacity:'',material:'',packing:'',meas:'',weight:'',load:'',prices:[{price:'',moq:''}],photo:''});
-            render(); toast('已添加一款新产品');
+            render(); toast(t('toast_add_product'));
           } else if(a==='del-product'){
-            C.products.splice(+btn.dataset.i,1); render(); toast('已删除该产品');
+            C.products.splice(+btn.dataset.i,1); render(); toast(t('toast_del_product'));
           } else if(a==='add-tier'){
             const i=+btn.dataset.i; C.products[i].prices.push({price:'',moq:''}); render();
           } else if(a==='del-tier'){
@@ -535,7 +545,7 @@
           } else if(a==='add-price-block'){
             const i=+btn.dataset.i; C.products[i].priceHidden=false;
             if(!C.products[i].prices||!C.products[i].prices.length) C.products[i].prices=[{price:'',moq:''}];
-            render(); toast('已添加价格栏');
+            render(); toast(t('toast_add_price'));
           } else if(a==='add-spec'){
             const i=+btn.dataset.i; ensureSpecs(C.products[i]); C.products[i].specs.push({label:'新属性',value:''}); render(); toast('已添加属性，点左侧文字改名、右侧填值');
           } else if(a==='del-spec'){
@@ -544,7 +554,7 @@
             const src=btn.dataset.src; const k=C.gallery.indexOf(src); if(k>=0) C.gallery.splice(k,1); render();
           } else if(a==='add-color'){
             const i=+btn.dataset.i; if(!C.products[i].colors) C.products[i].colors=[];
-            C.products[i].colors.push({name:'新颜色',hex:'#cccccc',photo:''}); render(); toast('已添加颜色，点色块可上传该颜色图片');
+            C.products[i].colors.push({name:'新颜色',hex:'#cccccc',photo:''}); render(); toast(t('toast_add_color'));
           } else if(a==='del-color'){
             const i=+btn.dataset.i, ci=+btn.dataset.ci; C.products[i].colors.splice(ci,1); render(); toast('已删除该颜色');
           } else if(a==='car-prev'||a==='car-next'){
@@ -556,8 +566,8 @@
             const i=+btn.dataset.i; const pr=C.products[i]; const k=selColor[i]??0;
             const c=pr.colors&&pr.colors[k]; const arr=c?c.photos:(pr.photos||[]);
             const ai=selAngle[i]??0;
-            if(arr.length>1){ arr.splice(ai,1); selAngle[i]=Math.max(0,ai-1); render(); toast('已删除当前视角'); }
-            else { render(); toast('至少保留 1 张视角（可点击图片替换）'); }
+            if(arr.length>1){ arr.splice(ai,1); selAngle[i]=Math.max(0,ai-1); render(); toast(t('toast_rm_angle')); }
+            else { render(); toast(t('toast_at_least_one')); }
           } else if(a==='match-photos'){
             const i=+btn.dataset.i; applyMatch(i, matchPhotos(C.products[i].item));
           } else if(a==='match-all'){
@@ -565,7 +575,7 @@
             C.products.forEach((pr,idx)=>{
               if(!hasPhotos(pr)){ const f=matchPhotos(pr.item); if(f.length){ pr.photo=f[0]; pr.photos=f.slice(); if(pr.colors&&pr.colors.length){ pr.colors[0].photos=f.slice(); pr.colors[0].photo=f[0]; } n++; } }
             });
-            render(); toast(n? ('已为 '+n+' 款产品自动匹配图片') : '没有可匹配的产品（或都已配图）');
+            render(); toast(n? t('toast_match').replace('{n}', n) : t('toast_match_none'));
           }
         });
       });
@@ -619,7 +629,7 @@
             }
             else if(fileTarget.action==='up-img'){ C.gallery[fileTarget.k]=dataURL; }
             else if(fileTarget.action==='add-img'){ C.gallery.push(dataURL); }
-            render(); toast('图片已更新（点「导出数据」后持久化）');
+            render(); toast(t('toast_img_updated'));
           };
           r.readAsDataURL(f);
           picker.value='';
@@ -751,6 +761,14 @@
       });
     }
 
+    function applyEditorLang(){
+      const tb=document.querySelector('.tb-title'); if(tb) tb.innerHTML='<span class="dot"></span>'+esc(t('editor_title'));
+      const mt=document.getElementById('modeToggle'); if(mt){ mt.querySelectorAll('button').forEach(function(b){ b.textContent = b.dataset.mode==='preview'? t('preview') : t('edit'); }); }
+      const ma=document.getElementById('btnMatchAll'); if(ma) ma.textContent=t('match_all');
+      const ex=document.getElementById('btnExport'); if(ex) ex.textContent=t('export_data');
+      const pr=document.getElementById('btnPrint'); if(pr) pr.textContent=t('print');
+    }
+
     // ---------- toolbar ----------
     function applyZoom(){ canvas.style.zoom=state.zoom+'%'; document.getElementById('zoomVal').textContent=state.zoom+'%'; }
     function applyCols(){ document.documentElement.style.setProperty('--cols',state.cols); document.getElementById('colsVal').textContent=state.cols; }
@@ -815,7 +833,7 @@
       const blob=new Blob([js],{type:'text/javascript;charset=utf-8'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download='catalog-data.js'; a.click();
-      toast('已导出 catalog-data.js（下载后覆盖原文件，刷新即可生效）');
+      toast(t('toast_exported'));
     }
 
     let toastT;
@@ -831,7 +849,10 @@
       }
     });
     // init
-    loadPrefs(); applyZoom(); applyCols(); applyAccent(document.getElementById('accent').value); applyMode(); applyRatio(); render();
+    loadPrefs(); applyZoom(); applyCols(); applyAccent(document.getElementById('accent').value); applyMode(); applyRatio();
+    window.render = render;
+    buildLangBar(document.getElementById('langBar'));
+    render();
   })();
   </script>
 </body>

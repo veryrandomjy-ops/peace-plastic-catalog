@@ -23,10 +23,11 @@
 
 window.CATALOG = {
   "year": "2026",
-  "priceLabel": "出厂价 (不含税) / Ex-works",
+  "priceLabel": "出厂价 (不含税)",
+  "priceLabel_en": "Ex-works Price (excl. tax)",
   "title": {
     "zh": "BEER TOWER CATALOG",
-    "en": "精酿扎啤塔 · 分酒器 · Tap Tower 产品目录"
+    "en": "Craft Beer Tower · Dispenser · Tap Tower Product Catalog"
   },
   "brand": {
     "name": "Huangyan Peace Plastic Factory",
@@ -39,7 +40,9 @@ window.CATALOG = {
     "email": "sales2@peace-plastic.com"
   },
   "intro": "共 {n} 款啤酒塔 / 扎啤塔机型，涵盖 1.5L–5L 容量、AS/ABS/PC 等多种材质，支持阶梯出厂价与灵活起订量。价格为<b>不含税出厂价</b>，最终报价以书面确认为准。",
+  "intro_en": "A total of {n} beer tower / tap tower models, covering 1.5L–5L capacities and materials such as AS/ABS/PC, with tiered ex-works prices and flexible MOQs. Prices are <b>ex-works, excl. tax</b>; final quotation is subject to written confirmation.",
   "galleryLead": "产品实拍展示（点击查看大图）。共 {n} 张。",
+  "galleryLead_en": "Real product photos (click to enlarge). {n} images in total.",
   "products": [
     {
       "item": "HP245",
@@ -108,6 +111,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "HP247.jpg",
@@ -116,11 +120,13 @@ window.CATALOG = {
         },
         {
           "name": "宝石红",
+          "name_en": "Ruby Red",
           "hex": "#c0392b",
           "photos": []
         },
         {
           "name": "香槟金",
+          "name_en": "Champagne Gold",
           "hex": "#E8A33D",
           "photos": []
         }
@@ -217,6 +223,7 @@ window.CATALOG = {
     {
       "item": "HP253",
       "desc": "beer tower 24*26*56cm(象腿）",
+      "desc_en": "beer tower 24*26*56cm (elephant-leg shape)",
       "capacity": "3L",
       "material": "PC/ABS",
       "packing": "1pcs/inner box / 2pcs/ctn",
@@ -298,6 +305,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "hp256-ce.jpg"
@@ -328,6 +336,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "hp256-ce.jpg"
@@ -358,6 +367,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "hp256-ce.jpg"
@@ -388,6 +398,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "hp256-ce.jpg"
@@ -418,6 +429,7 @@ window.CATALOG = {
       "colors": [
         {
           "name": "默认款",
+          "name_en": "Default",
           "hex": "#E8A33D",
           "photos": [
             "hp256-ce.jpg"
@@ -493,6 +505,7 @@ window.CATALOG = {
       "capacity": "3L",
       "material": "ABS/PC",
       "packing": "2pcs/ctn / 分体单个包装",
+      "packing_en": "2pcs/ctn / split-type individual packing",
       "meas": "66*33*67 / 54*33*26",
       "weight": "8/5.5kg",
       "load": "346PCS",
@@ -519,7 +532,8 @@ window.CATALOG = {
       "capacity": "3L",
       "material": "ABS/PC",
       "packing": "2pcs/ctn",
-      "meas": "50.5*29.5*62 / 内箱（28*24.5*60cm)",
+      "meas": "50.5*29.5*62 / 内箱（28*24.5*60cm）",
+      "meas_en": "50.5*29.5*62 / inner box (28*24.5*60cm)",
       "weight": "",
       "load": "",
       "prices": [
@@ -646,6 +660,7 @@ window.CATALOG = {
     {
       "item": "HP270(1.5L)",
       "desc": "beer tower beer tower 不喷漆 beer tower",
+      "desc_en": "beer tower unpainted beer tower",
       "capacity": "1.5L",
       "material": "",
       "packing": "1pcs/inner box",
@@ -696,9 +711,11 @@ window.CATALOG = {
     {
       "item": "HP272",
       "desc": "beer tower 21*21*71 盖+龙头+连接器(+5) 全套(+18) beer tower 23*25*50 20*20*60",
+      "desc_en": "beer tower 21*21*71 lid+faucet+connector(+5) full set(+18) beer tower 23*25*50 20*20*60",
       "capacity": "3L",
       "material": "ABS/PC",
       "packing": "1pcs/inner box / 3pcs/ctn / 彩盒+泡沫 / 3pcs/ctn / 彩盒+泡沫 / 20GP: 915PCS / 40GP: 1830pcs",
+      "packing_en": "1pcs/inner box / 3pcs/ctn / color box+foam / 3pcs/ctn / color box+foam / 20GP: 915PCS / 40GP: 1830pcs",
       "meas": "68*24*77 / 21*21*72.5cm / 65.5*22.5*75cm / 51.5*26*73cm / 44*44*63",
       "weight": "6.3/9KG",
       "load": "",

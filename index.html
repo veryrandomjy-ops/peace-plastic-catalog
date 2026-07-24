@@ -114,21 +114,30 @@
   /* ---------- PRINT ---------- */
   @media print {
     * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+    .lang-bar { display:none!important; }
     .cover { min-height:100vh; page-break-after:always; }
     .card { break-inside:avoid; box-shadow:none; }
     .g-item { break-inside:avoid; }
     section { padding:24px 0; }
   }
+  /* ---------- 语言切换 ---------- */
+  .lang-bar { position:fixed; top:14px; right:16px; z-index:10000; display:flex; gap:6px;
+    background:rgba(28,20,10,.82); padding:5px; border-radius:30px; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+  .lang-bar button { border:0; background:transparent; color:#e9dcc0; font-size:13px;
+    padding:6px 12px; border-radius:20px; cursor:pointer; font-family:inherit; }
+  .lang-bar button.on { background:var(--amber); color:#1c140a; font-weight:700; }
 </style>
 </head>
 <body>
+
+  <div class="lang-bar" id="langBar"></div>
 
   <!-- ============ 渲染区：内容全部来自 catalog-data.js，无需修改此处 ============ -->
   <header class="cover" id="cover"></header>
 
   <section>
     <div class="wrap">
-      <div class="sec-title"><h2>产品目录</h2><span class="en" id="catEn">Product Catalog</span></div>
+      <div class="sec-title"><h2 id="catZh">产品目录</h2><span class="en" id="catEn">Product Catalog</span></div>
       <div class="sec-line"></div>
       <p class="lead" id="intro"></p>
       <div class="grid" id="grid"></div>
@@ -137,7 +146,7 @@
 
   <section style="background:#fffaf0;">
     <div class="wrap">
-      <div class="sec-title"><h2>实拍图廊</h2><span class="en">Photo Gallery</span></div>
+      <div class="sec-title"><h2 id="galZh">实拍图廊</h2><span class="en" id="galEn">Photo Gallery</span></div>
       <div class="sec-line"></div>
       <p class="lead" id="galleryLead"></p>
       <div class="gallery" id="gallery"></div>
@@ -148,6 +157,7 @@
 
   <!-- 可编辑数据文件：改这里的内容，保存后刷新本页面即可 -->
   <script src="catalog-data.js"></script>
+  <script src="i18n.js"></script>
   <script>
   (function () {
     const C = (typeof CATALOG !== 'undefined') ? CATALOG : (window.CATALOG || null);
@@ -179,20 +189,28 @@
       }
       return arr;
     }
-    // 规格属性：兼容旧固定字段与新 specs 数组
+    // 规格属性：兼容旧固定字段与新 specs 数组；返回结构化 {labelSrc,labelEn,valueSrc,valueEn}
     function normSpecs(p){
-      if(Array.isArray(p.specs)) return p.specs;
-      const map=[['容量 Capacity','capacity'],['材质 Material','material'],['规格 Size','desc'],['包装 Packing','packing'],['外箱 MEAS','meas'],['毛/净重 N.W/G.W','weight'],['装柜 Load','load']];
-      return map.filter(([_,k])=> p[k]!=null && p[k]!=='').map(([label,k])=>({label, value:String(p[k])}));
+      if(Array.isArray(p.specs)){
+        return p.specs.map(function(s){
+          return { labelSrc:s.label, labelEn:s.label_en||'', valueSrc:s.value, valueEn:s.value_en||'' };
+        });
+      }
+      const map=[{zh:'容量',en:'Capacity',key:'capacity'},{zh:'材质',en:'Material',key:'material'},
+                 {zh:'规格',en:'Size',key:'desc'},{zh:'包装',en:'Packing',key:'packing'},
+                 {zh:'外箱',en:'MEAS',key:'meas'},{zh:'毛/净重',en:'N.W/G.W',key:'weight'},{zh:'装柜',en:'Load',key:'load'}];
+      return map.filter(function(o){ return p[o.key]!=null && p[o.key]!==''; })
+                .map(function(o){ return { labelSrc:o.zh, labelEn:o.en, valueSrc:p[o.key], valueEn:p[o.key+'_en'] }; });
     }
 
+    function renderCatalog(){
     // ---- Cover ----
     const b = C.brand || {};
     document.getElementById('cover').innerHTML = `
       <div class="kicker">${esc(b.name || 'Brand')}</div>
       <div class="tap">🍺</div>
-      <h1>${esc(C.title && C.title.zh || 'BEER TOWER CATALOG')}</h1>
-      <div class="sub">${esc(C.title && C.title.en || 'Tap Tower 产品目录')}</div>
+      <h1>${esc(L(C.title && C.title.zh || 'BEER TOWER CATALOG', C.title && C.title.en))}</h1>
+      <div class="sub">${esc(C.title && C.title.en || 'Tap Tower Product Catalog')}</div>
       <div class="meta">
         ${b.contact ? `<div><b>Contact</b>${esc(b.contact)}</div>` : ''}
         ${b.tel ? `<div><b>Tel</b>${esc(b.tel)}</div>` : ''}
@@ -202,13 +220,20 @@
         ${b.email ? `<div><b>Email</b>${esc(b.email)}</div>` : ''}
       </div>
       <div class="foot">${esc(b.name || '')} · ${esc(C.year || '')} PRODUCT CATALOG</div>`;
+    document.getElementById('catZh').textContent = t('products');
+    document.getElementById('catEn').textContent = 'Product Catalog';
+    document.getElementById('catEn').style.display = (getLang()==='en') ? 'none' : '';
+    document.getElementById('galZh').textContent = t('gallery');
+    document.getElementById('galEn').textContent = 'Photo Gallery';
+    document.getElementById('galEn').style.display = (getLang()==='en') ? 'none' : '';
 
     // ---- Intro ----
     const products = C.products || [];
-    document.getElementById('intro').innerHTML = (C.intro || '').replace(/\{n\}/g, products.length);
+    document.getElementById('intro').innerHTML = L(C.intro || '', C.intro_en || '').replace(/\{n\}/g, products.length);
 
     // ---- Product cards（按 产品×颜色 展平为独立卡片）----
     const grid = document.getElementById('grid');
+    grid.innerHTML = '';
     const viewItems = [];
     products.forEach((p, pi) => {
       if (p.colors && p.colors.length) {
@@ -221,7 +246,7 @@
       const p = it.p, color = it.color;
       const specsArr = normSpecs(p);
       const specHtml = specsArr.map(s =>
-        `<div class="spec"><span class="sk">${esc(s.label)}</span><span class="sv">${esc(s.value)}</span></div>`).join('');
+        `<div class="spec"><span class="sk">${esc(L(s.labelSrc, s.labelEn))}</span><span class="sv">${esc(L(s.valueSrc, s.valueEn))}</span></div>`).join('');
 
       const tiers = (p.prices || []).filter(t => t && (t.price || t.moq));
       let priceHtml;
@@ -229,7 +254,7 @@
         priceHtml = tiers.map(t =>
           `<div class="tier"><span class="t-price">¥${esc(t.price)}</span><span class="t-moq">${esc(t.moq) || '—'}</span></div>`).join('');
       } else {
-        priceHtml = `<div class="tier"><span class="t-price muted">面议 / Quote</span></div>`;
+        priceHtml = `<div class="tier"><span class="t-price muted">${esc(t('quote'))}</span></div>`;
       }
 
       // 当前颜色首图；无颜色则用产品主图
@@ -246,7 +271,7 @@
       // 该产品的颜色一览（信息性，展平后不再卡内切换；高亮当前颜色）
       const colorDots = (p.colors && p.colors.length)
         ? `<div class="swatches">${p.colors.map(c =>
-            `<span class="swatch ${c === color ? 'on' : ''}" style="background:${esc(c.hex || '#ccc')}" title="${esc(c.name || '颜色')}"></span>${c.name ? `<span class="sw-label">${esc(c.name)}</span>` : ''}`
+            `<span class="swatch ${c === color ? 'on' : ''}" style="background:${esc(c.hex || '#ccc')}" title="${esc(L(c.name || '颜色', c.name_en || ''))}"></span>${c.name ? `<span class="sw-label">${esc(L(c.name, c.name_en || ''))}</span>` : ''}`
           ).join('')}</div>`
         : '';
 
@@ -260,8 +285,8 @@
         <div class="card-body">
           <div class="specs">${specHtml}</div>
           <div class="price-block">
-            <div class="pb-title">${esc(C.priceLabel || '出厂价 (不含税) / Ex-works')}</div>
-            ${p.priceHidden ? `<div class="tiers"><div class="tier"><span class="t-price muted">面议 / Quote</span></div></div>` : `<div class="tiers">${priceHtml}</div>`}
+            <div class="pb-title">${esc(L(C.priceLabel || '出厂价 (不含税)', C.priceLabel_en || 'Ex-works Price (excl. tax)'))}</div>
+            ${p.priceHidden ? `<div class="tiers"><div class="tier"><span class="t-price muted">${esc(t('quote'))}</span></div></div>` : `<div class="tiers">${priceHtml}</div>`}
           </div>
         </div>`;
       // 点击产品图放大查看（含该产品全部视角/颜色图）
@@ -276,8 +301,9 @@
     // ---- Gallery ----
     const galleryFiles = C.gallery && C.gallery.length ? C.gallery : [];
     document.getElementById('galleryLead').textContent =
-      (C.galleryLead || '产品实拍展示（点击查看大图）。共 {n} 张。').replace('{n}', galleryFiles.length);
+      L(C.galleryLead || '产品实拍展示（点击查看大图）。共 {n} 张。', C.galleryLead_en || 'Real product photos (click to enlarge). {n} images in total.').replace(/\{n\}/g, galleryFiles.length);
     const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
     const gItems = galleryFiles.map(fn => ({src: imgUrl(fn), alt: fn}));
     galleryFiles.forEach((fn, gi) => {
       const a = document.createElement('a');
@@ -293,6 +319,11 @@
       <div><b>${esc(b.name || '')}</b>${b.cn ? ' · ' + esc(b.cn) : ''}</div>
       <div style="margin-top:8px;">${[b.tel, b.fax, b.mob].filter(Boolean).map(esc).join(' &nbsp;|&nbsp; ')}</div>
       <div style="margin-top:8px;">${[b.web, b.email].filter(Boolean).map(esc).join(' &nbsp;|&nbsp; ')}</div>`;
+    }
+
+    window.__renderCatalog = renderCatalog;
+    renderCatalog();
+    buildLangBar(document.getElementById('langBar'));
 
     // ---- Lightbox（统一灯箱：点击放大、左右切换、ESC/点击关闭）----
     function openLightbox(items, idx){
@@ -300,10 +331,10 @@
       const ov = document.createElement('div');
       ov.className = 'lightbox';
       ov.innerHTML =
-        '<span class="lb-close" title="关闭 (Esc)">&times;</span>' +
-        '<span class="lb-prev" title="上一张 (←)">&#8249;</span>' +
+        '<span class="lb-close" title="'+esc(t('close'))+'">&times;</span>' +
+        '<span class="lb-prev" title="'+esc(t('prev'))+'">&#8249;</span>' +
         '<img class="lb-img" alt="">' +
-        '<span class="lb-next" title="下一张 (→)">&#8250;</span>' +
+        '<span class="lb-next" title="'+esc(t('next'))+'">&#8250;</span>' +
         '<div class="lb-count"></div>';
       document.body.appendChild(ov);
       let i = idx || 0;
